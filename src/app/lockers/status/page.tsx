@@ -62,10 +62,10 @@ export default function LockersStatusPage() {
     }
   }, [])
 
-  const handleMarkAsDelivered = (index: number, isEmergency: boolean = false) => {
+  const handleMarkAsDelivered = (lockerId: number, itemIndex: number, isEmergency: boolean = false) => {
     if (isEmergency) {
       const updatedEmergencyItems = [...emergencyItems];
-      const deliveredItem = updatedEmergencyItems[index];
+      const deliveredItem = updatedEmergencyItems[itemIndex];
       
       // Add to activity log
       const activities = JSON.parse(localStorage.getItem('activities') || '[]');
@@ -78,36 +78,36 @@ export default function LockersStatusPage() {
       localStorage.setItem('activities', JSON.stringify(activities));
       
       // Remove item from emergency items
-      updatedEmergencyItems.splice(index, 1);
+      updatedEmergencyItems.splice(itemIndex, 1);
       setEmergencyItems(updatedEmergencyItems);
       localStorage.setItem('emergencyItems', JSON.stringify(updatedEmergencyItems));
     } else {
       const updatedLockers = lockers.map(locker => {
-        if (locker.id === lockers[index].id) {
-          const updatedItems = [...locker.items]
-          const deliveredItem = updatedItems[index]
+        if (locker.id === lockerId) {
+          const updatedItems = [...locker.items];
+          const deliveredItem = updatedItems[itemIndex];
           // Add to activity log
-          const activities = JSON.parse(localStorage.getItem('activities') || '[]')
+          const activities = JSON.parse(localStorage.getItem('activities') || '[]');
           activities.unshift({
             type: 'remove',
             lockerId: locker.id,
             item: deliveredItem,
             timestamp: new Date()
-          })
-          localStorage.setItem('activities', JSON.stringify(activities))
+          });
+          localStorage.setItem('activities', JSON.stringify(activities));
           
           // Remove item from locker
-          updatedItems.splice(index, 1)
-          return { ...locker, items: updatedItems }
+          updatedItems.splice(itemIndex, 1);
+          return { ...locker, items: updatedItems };
         }
-        return locker
-      })
-  
-      setLockers(updatedLockers)
-      localStorage.setItem('lockers', JSON.stringify(updatedLockers))
+        return locker;
+      });
+
+      setLockers(updatedLockers);
+      localStorage.setItem('lockers', JSON.stringify(updatedLockers));
     }
 
-    window.dispatchEvent(new Event('lockersUpdated'))
+    window.dispatchEvent(new Event('lockersUpdated'));
   }
 
   const getStatusBadge = (status: string) => {
@@ -218,7 +218,7 @@ export default function LockersStatusPage() {
                             key={item.ticket}
                             variant="outline"
                             size="sm"
-                            onClick={() => handleMarkAsDelivered(index, false)}
+                            onClick={() => handleMarkAsDelivered(locker.id, itemIndex, false)}
                             className="text-green-600 hover:text-green-700 hover:bg-green-50 gap-2"
                           >
                             <Check className="h-4 w-4" />
@@ -261,7 +261,7 @@ export default function LockersStatusPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleMarkAsDelivered(index, true)}
+                      onClick={() => handleMarkAsDelivered(lockers[0].id, index, true)} 
                       className="text-green-600 hover:text-green-700 hover:bg-green-50"
                     >
                       <Check className="mr-2 h-4 w-4" />

@@ -20,7 +20,7 @@ import type { LockerItem } from "@/types/locker"
 interface ActivityEvent {
   type: 'add' | 'remove' | 'emergency';
   lockerId?: number;
-  item: LockerItem & { location?: string; description?: string; isEmergency?: boolean };
+  item?: LockerItem & { location?: string; description?: string; isEmergency?: boolean };
   timestamp: Date;
 }
 
@@ -89,7 +89,7 @@ export default function LockersActivityPage() {
             </TableHeader>
             <TableBody>
               {activities.map((activity, index) => (
-                <TableRow key={`${activity.item.ticket}-${index}`}>
+                <TableRow key={`${activity.item?.ticket || index}-${index}`}>
                   <TableCell className="whitespace-nowrap">
                     {format(activity.timestamp, "d 'de' MMMM 'a las' HH:mm", { locale: es })}
                   </TableCell>
@@ -124,19 +124,21 @@ export default function LockersActivityPage() {
                   </TableCell>
                   <TableCell>{activity.lockerId ? `#${activity.lockerId}` : 'N/A'}</TableCell>
                   <TableCell>
-                    <Badge 
-                      variant="secondary"
-                      className="bg-purple-50 text-purple-700 border-purple-200"
-                    >
-                      <Ticket className="mr-1 h-3 w-3" />
-                      {activity.item.ticket}
-                    </Badge>
+                    {activity.item?.ticket && (
+                      <Badge 
+                        variant="secondary"
+                        className="bg-purple-50 text-purple-700 border-purple-200"
+                      >
+                        <Ticket className="mr-1 h-3 w-3" />
+                        {activity.item.ticket}
+                      </Badge>
+                    )}
                   </TableCell>
-                  <TableCell className="font-mono">{activity.item.dni}</TableCell>
+                  <TableCell className="font-mono">{activity.item?.dni || 'N/A'}</TableCell>
                   {activity.type === 'emergency' && (
                     <>
-                      <TableCell>{activity.item.location}</TableCell>
-                      <TableCell>{activity.item.description}</TableCell>
+                      <TableCell>{activity.item?.location || 'N/A'}</TableCell>
+                      <TableCell>{activity.item?.description || 'N/A'}</TableCell>
                     </>
                   )}
                 </TableRow>
