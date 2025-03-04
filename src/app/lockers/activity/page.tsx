@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -24,7 +24,7 @@ interface ActivityEvent {
   timestamp: Date;
 }
 
-export default function LockersActivityPage() {
+function LockersActivityPage() {
   const [activities, setActivities] = useState<ActivityEvent[]>([])
 
   useEffect(() => {
@@ -149,5 +149,13 @@ export default function LockersActivityPage() {
       </ScrollArea>
     </motion.div>
   )
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LockersActivityPage />
+    </Suspense>
+  );
 }
 

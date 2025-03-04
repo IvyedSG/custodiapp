@@ -10,16 +10,20 @@ const TOTAL_TICKETS = 50;
 
 // Initialize tickets from localStorage or create new arrays
 function initializeTickets() {
-  const savedState = localStorage.getItem('ticketState');
-  if (savedState) {
-    const { available, assigned } = JSON.parse(savedState);
-    return { availableTickets: available, assignedTickets: assigned };
+  if (typeof window !== "undefined") { // ✅ Verifica que se ejecuta en el cliente
+    const savedState = localStorage.getItem('ticketState');
+    if (savedState) {
+      const { available, assigned } = JSON.parse(savedState);
+      return { availableTickets: available, assignedTickets: assigned };
+    }
   }
+
   return {
     availableTickets: Array.from({ length: TOTAL_TICKETS }, (_, i) => `T-${String(i + 1).padStart(3, '0')}`),
     assignedTickets: []
   };
 }
+
 
 let { availableTickets, assignedTickets } = initializeTickets();
 

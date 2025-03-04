@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Box, Activity, LineChart } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -10,11 +9,7 @@ import { TicketSearch } from "@/components/tickets/ticket-search"
 import { EmergencyRegistrationDialog } from "@/components/emergency-registration-dialog"
 import type { Locker } from "@/types/locker"
 
-export default function LockersLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+function LockersLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [service, setService] = useState<string | null>(null)
@@ -131,6 +126,14 @@ export default function LockersLayout({
       </main>
       <EmergencyRegistrationDialog isOpen={isEmergencyDialogOpen} setIsOpen={setIsEmergencyDialogOpen} />
     </div>
+  )
+}
+
+export default function LockersLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LockersLayoutContent>{children}</LockersLayoutContent>
+    </Suspense>
   )
 }
 

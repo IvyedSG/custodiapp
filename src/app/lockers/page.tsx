@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { motion } from "framer-motion"
 import { LockerGrid } from "@/components/lockers/locker-grid"
 import { LockerDialog } from "@/components/lockers/locker-dialog"
@@ -10,7 +10,7 @@ import { useSearchParams } from "next/navigation"
 
 const TOTAL_LOCKERS = 24
 
-export default function LockersPage() {
+function LockersPage() {
   const [lockers, setLockers] = useState<Locker[]>([])
   const [selectedLocker, setSelectedLocker] = useState<number | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -91,4 +91,12 @@ export default function LockersPage() {
       />
     </motion.div>
   )
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LockersPage />
+    </Suspense>
+  );
 }
