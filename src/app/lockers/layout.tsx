@@ -1,7 +1,9 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
-import { Box, Activity, LineChart } from 'lucide-react'
+import { Box, Activity, LineChart } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
 import { TicketSearch } from "@/components/tickets/ticket-search"
@@ -22,64 +24,64 @@ export default function LockersLayout({
 
   useEffect(() => {
     const loadLockers = () => {
-      const savedLockers = localStorage.getItem('lockers')
+      const savedLockers = localStorage.getItem("lockers")
       if (savedLockers) {
         // Parse the lockers and convert timestamp strings back to Date objects
         const parsedLockers = JSON.parse(savedLockers, (key, value) => {
-          if (key === 'timestamp' && value) {
-            return new Date(value);
+          if (key === "timestamp" && value) {
+            return new Date(value)
           }
-          return value;
-        });
-        setLockers(parsedLockers);
+          return value
+        })
+        setLockers(parsedLockers)
       }
     }
 
-    loadLockers(); // Initial load
+    loadLockers() // Initial load
 
     // Listen for changes
-    window.addEventListener('storage', loadLockers);
-    
+    window.addEventListener("storage", loadLockers)
+
     // Custom event for local updates
-    window.addEventListener('lockersUpdated', loadLockers);
+    window.addEventListener("lockersUpdated", loadLockers)
 
     return () => {
-      window.removeEventListener('storage', loadLockers);
-      window.removeEventListener('lockersUpdated', loadLockers);
+      window.removeEventListener("storage", loadLockers)
+      window.removeEventListener("lockersUpdated", loadLockers)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    const savedService = localStorage.getItem('selectedService')
-    const savedStaff = localStorage.getItem('selectedStaff')
+    const savedService = localStorage.getItem("selectedService")
+    const savedStaff = localStorage.getItem("selectedStaff")
     if (savedService) setService(savedService)
     if (savedStaff) setStaff(savedStaff)
 
     const handleStorageChange = () => {
-      const updatedService = localStorage.getItem('selectedService')
-      const updatedStaff = localStorage.getItem('selectedStaff')
+      const updatedService = localStorage.getItem("selectedService")
+      const updatedStaff = localStorage.getItem("selectedStaff")
       if (updatedService) setService(updatedService)
       if (updatedStaff) setStaff(updatedStaff)
     }
 
-    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener("storage", handleStorageChange)
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener("storage", handleStorageChange)
     }
   }, [])
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#F3E5F5]">
-      <header className="flex h-16 shrink-0 items-center justify-between px-6">
-        <div className="flex items-center gap-6">
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-purple-600">
+    <div className="flex h-screen w-full flex-col bg-[#F3E5F5]">
+      <header className="flex h-16 shrink-0 items-center justify-between px-4 md:px-6">
+        <div className="flex items-center gap-4 md:gap-6">
+          <h1 className="flex items-center gap-2 text-xl md:text-2xl font-bold text-purple-600">
             Custodia
             <span className="text-yellow-400">✨</span>
           </h1>
           <TicketSearch lockers={lockers} onEmergencyRegistration={() => setIsEmergencyDialogOpen(true)} />
         </div>
         {(service || staff) && (
-          <div className="rounded-lg bg-purple-600 px-4 py-2 text-sm text-white">
+          <div className="rounded-lg bg-purple-600 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white">
             {service && `${service} servicio`}
             {service && staff && " - "}
             {staff && `Encargado: ${staff}`}
@@ -87,52 +89,47 @@ export default function LockersLayout({
         )}
       </header>
 
-      <main className="flex-1 overflow-hidden px-6 pb-6">
+      <main className="flex-1 overflow-auto p-2 md:p-4 lg:p-6">
         <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm">
           <div className="grid w-full grid-cols-3 border-b">
-            <Link 
+            <Link
               href="/lockers"
-              className={`flex items-center justify-center gap-2 border-b-2 px-6 py-3 text-sm font-medium transition-colors ${
-                pathname === '/lockers' 
-                  ? 'border-purple-600 text-purple-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              className={`flex items-center justify-center gap-2 border-b-2 px-2 py-2 md:px-6 md:py-3 text-xs md:text-sm font-medium transition-colors ${
+                pathname === "/lockers"
+                  ? "border-purple-600 text-purple-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              <Box className="h-4 w-4" />
+              <Box className="h-3 w-3 md:h-4 md:w-4" />
               Lockers
             </Link>
-            <Link 
+            <Link
               href="/lockers/status"
-              className={`flex items-center justify-center gap-2 border-b-2 px-6 py-3 text-sm font-medium transition-colors ${
-                pathname === '/lockers/status'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              className={`flex items-center justify-center gap-2 border-b-2 px-2 py-2 md:px-6 md:py-3 text-xs md:text-sm font-medium transition-colors ${
+                pathname === "/lockers/status"
+                  ? "border-purple-600 text-purple-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              <LineChart className="h-4 w-4" />
+              <LineChart className="h-3 w-3 md:h-4 md:w-4" />
               Status
             </Link>
-            <Link 
+            <Link
               href="/lockers/activity"
-              className={`flex items-center justify-center gap-2 border-b-2 px-6 py-3 text-sm font-medium transition-colors ${
-                pathname === '/lockers/activity'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              className={`flex items-center justify-center gap-2 border-b-2 px-2 py-2 md:px-6 md:py-3 text-xs md:text-sm font-medium transition-colors ${
+                pathname === "/lockers/activity"
+                  ? "border-purple-600 text-purple-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              <Activity className="h-4 w-4" />
+              <Activity className="h-3 w-3 md:h-4 md:w-4" />
               Activity
             </Link>
           </div>
-          <div className="flex-1 overflow-auto p-6">
-            {children}
-          </div>
+          <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6">{children}</div>
         </div>
       </main>
-      <EmergencyRegistrationDialog
-        isOpen={isEmergencyDialogOpen}
-        setIsOpen={setIsEmergencyDialogOpen}
-      />
+      <EmergencyRegistrationDialog isOpen={isEmergencyDialogOpen} setIsOpen={setIsEmergencyDialogOpen} />
     </div>
   )
 }
