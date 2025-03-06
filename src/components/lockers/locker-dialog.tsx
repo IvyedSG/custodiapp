@@ -52,7 +52,7 @@ export function LockerDialog({
 
   const handleAddItem = () => {
     if (dni && assignedTicket && locker && locker.items.length < 3) {
-      // Add to activity log before adding item
+ 
       const activities = JSON.parse(localStorage.getItem('activities') || '[]')
       activities.unshift({
         type: 'add',
@@ -66,7 +66,7 @@ export function LockerDialog({
       })
       localStorage.setItem('activities', JSON.stringify(activities))
 
-      // Add item to locker
+    
       onAddItem(dni, assignedTicket);
       setDni('');
       setAssignedTicket(null);

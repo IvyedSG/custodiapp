@@ -20,7 +20,7 @@ function LockersPage() {
   const staff = searchParams.get("staff")
 
   useEffect(() => {
-    if (service) localStorage.setItem("selectedService", service)
+    if (service) localStorage.setItem("selectedServiceName", service)
     if (staff) localStorage.setItem("selectedStaff", staff)
   }, [service, staff])
 
@@ -69,7 +69,7 @@ function LockersPage() {
         localStorage.setItem("lockers", JSON.stringify(newLockers))
         syncTicketsWithLockers(newLockers)
 
-        // Dispatch custom event to notify layout of changes
+      
         window.dispatchEvent(new CustomEvent("lockersUpdated"))
       }
     }
@@ -98,5 +98,5 @@ export default function Page() {
     <Suspense fallback={<div>Loading...</div>}>
       <LockersPage />
     </Suspense>
-  );
+  )
 }

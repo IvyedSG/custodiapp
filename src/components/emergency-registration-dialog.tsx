@@ -40,12 +40,12 @@ export function EmergencyRegistrationDialog({ isOpen, setIsOpen }: EmergencyRegi
       isEmergency: true
     }
 
-    // Add to emergency items
+  
     const emergencyItems = JSON.parse(localStorage.getItem('emergencyItems') || '[]')
     emergencyItems.push(newItem)
     localStorage.setItem('emergencyItems', JSON.stringify(emergencyItems))
 
-    // Add to activity log
+   
     const activities = JSON.parse(localStorage.getItem('activities') || '[]')
     activities.unshift({
       type: 'emergency',
@@ -54,7 +54,7 @@ export function EmergencyRegistrationDialog({ isOpen, setIsOpen }: EmergencyRegi
     })
     localStorage.setItem('activities', JSON.stringify(activities))
 
-    // Simulate API delay
+   
     await new Promise(resolve => setTimeout(resolve, 1000))
 
     setIsLoading(false)
@@ -63,7 +63,7 @@ export function EmergencyRegistrationDialog({ isOpen, setIsOpen }: EmergencyRegi
     setDescription("")
     setIsOpen(false)
 
-    // Notify of changes
+    
     window.dispatchEvent(new Event('emergencyItemAdded'))
   }
 

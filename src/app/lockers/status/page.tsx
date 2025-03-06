@@ -67,7 +67,7 @@ export default function LockersStatusPage() {
       const updatedEmergencyItems = [...emergencyItems];
       const deliveredItem = updatedEmergencyItems[itemIndex];
       
-      // Add to activity log
+    
       const activities = JSON.parse(localStorage.getItem('activities') || '[]');
       activities.unshift({
         type: 'remove',
@@ -77,7 +77,7 @@ export default function LockersStatusPage() {
       });
       localStorage.setItem('activities', JSON.stringify(activities));
       
-      // Remove item from emergency items
+   
       updatedEmergencyItems.splice(itemIndex, 1);
       setEmergencyItems(updatedEmergencyItems);
       localStorage.setItem('emergencyItems', JSON.stringify(updatedEmergencyItems));
@@ -86,7 +86,7 @@ export default function LockersStatusPage() {
         if (locker.id === lockerId) {
           const updatedItems = [...locker.items];
           const deliveredItem = updatedItems[itemIndex];
-          // Add to activity log
+         
           const activities = JSON.parse(localStorage.getItem('activities') || '[]');
           activities.unshift({
             type: 'remove',
@@ -96,7 +96,7 @@ export default function LockersStatusPage() {
           });
           localStorage.setItem('activities', JSON.stringify(activities));
           
-          // Remove item from locker
+         
           updatedItems.splice(itemIndex, 1);
           return { ...locker, items: updatedItems };
         }

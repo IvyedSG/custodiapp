@@ -44,7 +44,7 @@ export function TicketSearch({ lockers, onEmergencyRegistration }: TicketSearchP
       setTimeout(() => setShowAlert(false), 3000)
     }
 
-    setSearchValue("") // Clear the input after searching
+    setSearchValue("") 
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -1,13 +1,11 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Clock, Loader2, CheckCircle, ArrowLeft, AlertCircle, Search } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -55,6 +53,7 @@ export function ServiceSelector() {
   const [dni, setDni] = useState("")
   const [user, setUser] = useState<User | null>(null)
   const [isUserSelected, setIsUserSelected] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -85,7 +84,7 @@ export function ServiceSelector() {
   }, [])
 
   useEffect(() => {
-    // Buscar cuando hay al menos 7 dígitos
+    
     if (dni.length >= 7) {
       fetchUser(dni)
     } else {
@@ -118,7 +117,7 @@ export function ServiceSelector() {
       const data = await response.json()
       setUser(data)
 
-      // Si es una búsqueda exacta (8 dígitos) y coincide exactamente, podemos seleccionar automáticamente
+   
       if (documentNumber.length === 8 && data.documentNumber === documentNumber) {
         setIsUserSelected(true)
       } else {
@@ -168,14 +167,40 @@ export function ServiceSelector() {
     setIsLoading(true)
 
     try {
-      // Aquí podrías agregar una llamada a la API para registrar el encargado si fuera necesario
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await fetch(
+        `https://cdv-custody-api.onrender.com/cdv-custody/api/v1/schedules/${selectedService}/transactions/start`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ documentNumber: dni }),
+        },
+      )
+
+      if (!response.ok) {
+        throw new Error("Error al comenzar el servicio")
+      }
+
+      const data = await response.json()
+      setSessionId(data.sessionId)
+
+    
+      localStorage.setItem("sessionId", data.sessionId)
+      localStorage.setItem("selectedService", selectedService)
+
 
       const serviceName = selectedServiceDetails?.name || ""
+      localStorage.setItem("selectedServiceName", serviceName)
+
+      
+      localStorage.setItem("selectedStaff", `${user?.firstName} ${user?.lastName}`)
+
       router.push(`/lockers?service=${serviceName}&staff=${user?.firstName} ${user?.lastName}`)
     } catch (err) {
       console.error("Error submitting form:", err)
       setError("Ocurrió un error al procesar tu solicitud.")
+    } finally {
       setIsLoading(false)
     }
   }
@@ -418,7 +443,7 @@ export function ServiceSelector() {
                     Cargando...
                   </motion.div>
                 ) : (
-                  "Continuar a Casilleros"
+                  "Comenzar Servicio"
                 )}
               </Button>
             </form>

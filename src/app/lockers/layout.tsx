@@ -1,10 +1,11 @@
 "use client"
 
 import type React from "react"
+import { Button } from "@/components/ui/button"
 import { useState, useEffect, Suspense } from "react"
 import { Box, Activity, LineChart } from "lucide-react"
 import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams, useRouter } from "next/navigation"
 import { TicketSearch } from "@/components/tickets/ticket-search"
 import { EmergencyRegistrationDialog } from "@/components/emergency-registration-dialog"
 import type { Locker } from "@/types/locker"
@@ -12,7 +13,8 @@ import type { Locker } from "@/types/locker"
 function LockersLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [service, setService] = useState<string | null>(null)
+  const router = useRouter()
+  const [serviceName, setServiceName] = useState<string | null>(null)
   const [staff, setStaff] = useState<string | null>(null)
   const [lockers, setLockers] = useState<Locker[]>([])
   const [isEmergencyDialogOpen, setIsEmergencyDialogOpen] = useState(false)
@@ -21,7 +23,6 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
     const loadLockers = () => {
       const savedLockers = localStorage.getItem("lockers")
       if (savedLockers) {
-        // Parse the lockers and convert timestamp strings back to Date objects
         const parsedLockers = JSON.parse(savedLockers, (key, value) => {
           if (key === "timestamp" && value) {
             return new Date(value)
@@ -32,12 +33,10 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
       }
     }
 
-    loadLockers() // Initial load
+    loadLockers() 
 
-    // Listen for changes
     window.addEventListener("storage", loadLockers)
 
-    // Custom event for local updates
     window.addEventListener("lockersUpdated", loadLockers)
 
     return () => {
@@ -47,15 +46,18 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    const savedService = localStorage.getItem("selectedService")
+   
+    const savedServiceName = localStorage.getItem("selectedServiceName")
     const savedStaff = localStorage.getItem("selectedStaff")
-    if (savedService) setService(savedService)
+
+    if (savedServiceName) setServiceName(savedServiceName)
     if (savedStaff) setStaff(savedStaff)
 
     const handleStorageChange = () => {
-      const updatedService = localStorage.getItem("selectedService")
+      const updatedServiceName = localStorage.getItem("selectedServiceName")
       const updatedStaff = localStorage.getItem("selectedStaff")
-      if (updatedService) setService(updatedService)
+
+      if (updatedServiceName) setServiceName(updatedServiceName)
       if (updatedStaff) setStaff(updatedStaff)
     }
 
@@ -64,6 +66,45 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
       window.removeEventListener("storage", handleStorageChange)
     }
   }, [])
+
+  const handleEndService = async () => {
+    const sessionId = localStorage.getItem("sessionId")
+    const serviceId = localStorage.getItem("selectedService")
+
+    if (!sessionId || !serviceId) {
+      console.error("No sessionId or serviceId found")
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `https://cdv-custody-api.onrender.com/cdv-custody/api/v1/schedules/${serviceId}/transactions/end`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Session-id": sessionId,
+          },
+        },
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Error response text:", errorText)
+        throw new Error("Error al terminar el servicio")
+      }
+
+
+      localStorage.removeItem("sessionId")
+      localStorage.removeItem("selectedService") 
+      localStorage.removeItem("selectedServiceName") 
+      localStorage.removeItem("selectedStaff") 
+
+      router.push("/")
+    } catch (err) {
+      console.error("Error ending service:", err)
+    }
+  }
 
   return (
     <div className="flex h-screen w-full flex-col bg-[#F3E5F5]">
@@ -75,11 +116,19 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
           </h1>
           <TicketSearch lockers={lockers} onEmergencyRegistration={() => setIsEmergencyDialogOpen(true)} />
         </div>
-        {(service || staff) && (
-          <div className="rounded-lg bg-purple-600 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white">
-            {service && `${service} servicio`}
-            {service && staff && " - "}
-            {staff && `Encargado: ${staff}`}
+        {(serviceName || staff) && (
+          <div className="flex items-center gap-4">
+            <div className="rounded-lg bg-purple-600 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white">
+              {serviceName && `${serviceName} servicio`}
+              {serviceName && staff && " - "}
+              {staff && `Encargado: ${staff}`}
+            </div>
+            <Button
+              onClick={handleEndService}
+              className="rounded-lg bg-red-600 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white hover:bg-red-700"
+            >
+              Terminar Servicio
+            </Button>
           </div>
         )}
       </header>
@@ -136,4 +185,3 @@ export default function LockersLayout({ children }: { children: React.ReactNode 
     </Suspense>
   )
 }
-
