@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { login } from "@/lib/actions"
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -27,15 +26,42 @@ export function LoginForm() {
     setError("")
 
     const formData = new FormData(event.currentTarget)
-    const response = await login(formData)
+    const username = formData.get("username")
+    const password = formData.get("password")
 
-    if (response.error) {
+    console.log("Form data:", Object.fromEntries(formData.entries()))
+
+    try {
+      const response = await fetch(
+        `https://cdv-custody-api.onrender.com/cdv-custody/login?username=${username}&password=${password}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+
+      console.log("Response status:", response.status)
+      console.log("Response status text:", response.statusText)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Error response text:", errorText)
+        throw new Error("Login failed")
+      }
+
+      const data = await response.json()
+      console.log("Response data:", data)
+      localStorage.setItem("jwt", data.jwt) // Guardar el JWT en localStorage
+
+      router.push("/services")
+    } catch (error) {
+      console.error("Login error:", error)
       setError("Usuario o contraseña inválidos")
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    router.push("/services")
   }
 
   return (
@@ -126,5 +152,3 @@ export function LoginForm() {
     </motion.div>
   )
 }
-
-

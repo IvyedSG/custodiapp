@@ -61,9 +61,22 @@ export function ServiceSelector() {
       setIsLoadingServices(true)
       setError(null)
 
+      const jwt = localStorage.getItem("jwt")
+      if (!jwt) {
+        setError("No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.")
+        setIsLoadingServices(false)
+        return
+      }
+
       try {
         const response = await fetch(
           "https://cdv-custody-api.onrender.com/cdv-custody/api/v1/schedules/active?campus=SURCO",
+          {
+            headers: {
+              Authorization: `Bearer ${jwt}`,
+              "Content-Type": "application/json",
+            },
+          },
         )
 
         if (!response.ok) {
@@ -84,8 +97,7 @@ export function ServiceSelector() {
   }, [])
 
   useEffect(() => {
-    
-    if (dni.length >= 7) {
+    if (dni.length === 8) {
       fetchUser(dni)
     } else {
       setUser(null)
@@ -98,18 +110,27 @@ export function ServiceSelector() {
     setIsLoadingUser(true)
     setUserError(null)
 
+    const jwt = localStorage.getItem("jwt")
+    if (!jwt) {
+      setUserError("No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.")
+      setIsLoadingUser(false)
+      return
+    }
+
     try {
       const response = await fetch(
         `https://cdv-custody-api.onrender.com/cdv-custody/api/v1/users/search?searchValue=${documentNumber}`,
+        {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+            "Content-Type": "application/json",
+          },
+        },
       )
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error(
-            documentNumber.length === 8
-              ? "No se encontró ningún encargado con ese DNI"
-              : "No se encontraron coincidencias",
-          )
+          throw new Error("No se encontró ningún encargado con ese DNI")
         }
         throw new Error("Error al buscar el encargado")
       }
@@ -117,8 +138,8 @@ export function ServiceSelector() {
       const data = await response.json()
       setUser(data)
 
-   
-      if (documentNumber.length === 8 && data.documentNumber === documentNumber) {
+      // Si el DNI coincide exactamente, seleccionamos automáticamente
+      if (data.documentNumber === documentNumber) {
         setIsUserSelected(true)
       } else {
         setIsUserSelected(false)
@@ -166,12 +187,20 @@ export function ServiceSelector() {
     event.preventDefault()
     setIsLoading(true)
 
+    const jwt = localStorage.getItem("jwt")
+    if (!jwt) {
+      setError("No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.")
+      setIsLoading(false)
+      return
+    }
+
     try {
       const response = await fetch(
         `https://cdv-custody-api.onrender.com/cdv-custody/api/v1/schedules/${selectedService}/transactions/start`,
         {
           method: "POST",
           headers: {
+            Authorization: `Bearer ${jwt}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ documentNumber: dni }),
@@ -185,15 +214,12 @@ export function ServiceSelector() {
       const data = await response.json()
       setSessionId(data.sessionId)
 
-    
       localStorage.setItem("sessionId", data.sessionId)
       localStorage.setItem("selectedService", selectedService)
-
 
       const serviceName = selectedServiceDetails?.name || ""
       localStorage.setItem("selectedServiceName", serviceName)
 
-      
       localStorage.setItem("selectedStaff", `${user?.firstName} ${user?.lastName}`)
 
       router.push(`/lockers?service=${serviceName}&staff=${user?.firstName} ${user?.lastName}`)
@@ -333,7 +359,7 @@ export function ServiceSelector() {
                           value={dni}
                           onChange={handleDniChange}
                           className="bg-white pl-9"
-                          placeholder="Ingresa el DNI (7-8 dígitos)"
+                          placeholder="Ingresa el DNI"
                           maxLength={8}
                           required
                           disabled={isUserSelected}
@@ -345,9 +371,7 @@ export function ServiceSelector() {
                         )}
                       </div>
 
-                      {dni.length > 0 && dni.length < 7 && (
-                        <p className="mt-1 text-xs text-muted-foreground">Ingresa al menos 7 dígitos para buscar</p>
-                      )}
+                      
 
                       {userError && <p className="mt-2 text-sm text-red-500">{userError}</p>}
 
@@ -364,11 +388,6 @@ export function ServiceSelector() {
                               </p>
                               <p className="text-sm text-muted-foreground">DNI: {user.documentNumber}</p>
                               <p className="text-sm text-muted-foreground">{user.email}</p>
-                              {dni.length === 7 && (
-                                <p className="mt-1 text-xs text-amber-600">
-                                  Coincidencia parcial - Confirma que sea el encargado correcto
-                                </p>
-                              )}
                             </div>
                             <Button
                               size="sm"

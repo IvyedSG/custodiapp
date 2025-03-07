@@ -70,12 +70,13 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
   const handleEndService = async () => {
     const sessionId = localStorage.getItem("sessionId")
     const serviceId = localStorage.getItem("selectedService")
-
-    if (!sessionId || !serviceId) {
-      console.error("No sessionId or serviceId found")
+    const jwt = localStorage.getItem("jwt")
+  
+    if (!sessionId || !serviceId || !jwt) {
+      console.error("No sessionId, serviceId, or jwt found")
       return
     }
-
+  
     try {
       const response = await fetch(
         `https://cdv-custody-api.onrender.com/cdv-custody/api/v1/schedules/${serviceId}/transactions/end`,
@@ -84,22 +85,22 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
           headers: {
             "Content-Type": "application/json",
             "Session-id": sessionId,
+            "Authorization": `Bearer ${jwt}`,
           },
         },
       )
-
+  
       if (!response.ok) {
         const errorText = await response.text()
         console.error("Error response text:", errorText)
         throw new Error("Error al terminar el servicio")
       }
-
-
+  
       localStorage.removeItem("sessionId")
-      localStorage.removeItem("selectedService") 
-      localStorage.removeItem("selectedServiceName") 
-      localStorage.removeItem("selectedStaff") 
-
+      localStorage.removeItem("selectedService")
+      localStorage.removeItem("selectedServiceName")
+      localStorage.removeItem("selectedStaff")
+  
       router.push("/")
     } catch (err) {
       console.error("Error ending service:", err)
