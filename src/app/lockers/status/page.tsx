@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { Lock, Unlock, Package, Eye, Check, Ticket } from 'lucide-react'
 import { LockerDialog } from '@/components/lockers/locker-dialog'
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type { Locker, LockerItem } from "@/types/locker"
+import type { Locker, LockerDetail } from "@/types/locker"
 import { getLockerStatus } from "@/lib/utils"
 
 export default function LockersStatusPage() {
@@ -67,7 +67,6 @@ export default function LockersStatusPage() {
       const updatedEmergencyItems = [...emergencyItems];
       const deliveredItem = updatedEmergencyItems[itemIndex];
       
-    
       const activities = JSON.parse(localStorage.getItem('activities') || '[]');
       activities.unshift({
         type: 'remove',
@@ -77,14 +76,13 @@ export default function LockersStatusPage() {
       });
       localStorage.setItem('activities', JSON.stringify(activities));
       
-   
       updatedEmergencyItems.splice(itemIndex, 1);
       setEmergencyItems(updatedEmergencyItems);
       localStorage.setItem('emergencyItems', JSON.stringify(updatedEmergencyItems));
     } else {
       const updatedLockers = lockers.map(locker => {
         if (locker.id === lockerId) {
-          const updatedItems = [...locker.items];
+          const updatedItems = [...locker.lockerDetails];
           const deliveredItem = updatedItems[itemIndex];
          
           const activities = JSON.parse(localStorage.getItem('activities') || '[]');
@@ -96,9 +94,8 @@ export default function LockersStatusPage() {
           });
           localStorage.setItem('activities', JSON.stringify(activities));
           
-         
           updatedItems.splice(itemIndex, 1);
-          return { ...locker, items: updatedItems };
+          return { ...locker, lockerDetails: updatedItems };
         }
         return locker;
       });
@@ -160,7 +157,7 @@ export default function LockersStatusPage() {
             </TableHeader>
             <TableBody>
               {lockers.map((locker, index) => {
-                const status = getLockerStatus(locker.items.length)
+                const status = getLockerStatus(locker.lockerDetails.length)
                 return (
                   <TableRow key={locker.id}>
                     <TableCell className="font-medium">
@@ -172,29 +169,29 @@ export default function LockersStatusPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
-                        {locker.items.map((item, itemIndex) => (
+                        {locker.lockerDetails.map((item, itemIndex) => (
                           <Badge 
-                            key={item.ticket} 
+                            key={item.ticketCode} 
                             variant="secondary"
                             className="bg-purple-50 text-purple-700 border-purple-200"
                           >
                             <Ticket className="mr-1 h-3 w-3" />
-                            {item.ticket}
+                            {item.ticketCode}
                           </Badge>
                         ))}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {locker.items.length > 0
+                      {locker.lockerDetails.length > 0
                         ? format(
-                            new Date(Math.max(...locker.items.map(item => item.timestamp.getTime()))),
+                            new Date(Math.max(...locker.lockerDetails.map(item => new Date(item.inTime).getTime()))),
                             "d 'de' MMMM 'a las' HH:mm",
                             { locale: es }
                           )
                         : 'N/A'}
                     </TableCell>
                     <TableCell className="text-center">
-                      {locker.items.length > 0 ? (
+                      {locker.lockerDetails.length > 0 ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -213,16 +210,16 @@ export default function LockersStatusPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-2">
-                        {locker.items.map((item, itemIndex) => (
+                        {locker.lockerDetails.map((item, itemIndex) => (
                           <Button
-                            key={item.ticket}
+                            key={item.ticketCode}
                             variant="outline"
                             size="sm"
                             onClick={() => handleMarkAsDelivered(locker.id, itemIndex, false)}
                             className="text-green-600 hover:text-green-700 hover:bg-green-50 gap-2"
                           >
                             <Check className="h-4 w-4" />
-                            Entregar {item.ticket}
+                            Entregar {item.ticketCode}
                           </Button>
                         ))}
                       </div>

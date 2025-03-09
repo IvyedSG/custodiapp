@@ -15,12 +15,12 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Package, Lock, Check, AlertCircle, Ticket } from 'lucide-react'
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type { LockerItem } from "@/types/locker"
+import type { LockerDetail } from "@/types/locker"
 
 interface ActivityEvent {
   type: 'add' | 'remove' | 'emergency';
   lockerId?: number;
-  item?: LockerItem & { location?: string; description?: string; isEmergency?: boolean };
+  item?: LockerDetail & { location?: string; description?: string; isEmergency?: boolean };
   timestamp: Date;
 }
 
@@ -89,7 +89,7 @@ function LockersActivityPage() {
             </TableHeader>
             <TableBody>
               {activities.map((activity, index) => (
-                <TableRow key={`${activity.item?.ticket || index}-${index}`}>
+                <TableRow key={`${activity.item?.ticketCode || index}-${index}`}>
                   <TableCell className="whitespace-nowrap">
                     {format(activity.timestamp, "d 'de' MMMM 'a las' HH:mm", { locale: es })}
                   </TableCell>
@@ -124,17 +124,17 @@ function LockersActivityPage() {
                   </TableCell>
                   <TableCell>{activity.lockerId ? `#${activity.lockerId}` : 'N/A'}</TableCell>
                   <TableCell>
-                    {activity.item?.ticket && (
+                    {activity.item?.ticketCode && (
                       <Badge 
                         variant="secondary"
                         className="bg-purple-50 text-purple-700 border-purple-200"
                       >
                         <Ticket className="mr-1 h-3 w-3" />
-                        {activity.item.ticket}
+                        {activity.item.ticketCode}
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="font-mono">{activity.item?.dni || 'N/A'}</TableCell>
+                  <TableCell className="font-mono">{activity.item?.user.documentNumber || 'N/A'}</TableCell>
                   {activity.type === 'emergency' && (
                     <>
                       <TableCell>{activity.item?.location || 'N/A'}</TableCell>

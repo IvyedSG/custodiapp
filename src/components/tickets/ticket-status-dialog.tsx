@@ -16,10 +16,11 @@ interface TicketStatusDialogProps {
   lockers: Locker[]
 }
 
-export function TicketStatusDialog({ open, onOpenChange, lockers }: TicketStatusDialogProps) {
+export function TicketStatusDialog({ open, onOpenChange, lockers = [] }: TicketStatusDialogProps) {
   const isTicketAssigned = (ticket: string) => {
+    if (!lockers) return false
     return lockers.some(locker => 
-      locker.items.some(item => item.ticket === ticket)
+      locker.lockerDetails.some(item => item.ticketCode === ticket)
     )
   }
 

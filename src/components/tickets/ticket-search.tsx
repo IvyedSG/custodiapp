@@ -1,62 +1,62 @@
 'use client'
 
-import { useState } from "react"
-import { Search, Grid2X2, AlertCircle } from 'lucide-react'
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { cn } from "@/lib/utils"
-import { TicketStatusDialog } from "./ticket-status-dialog"
-import type { Locker } from "@/types/locker"
+import React, { useState } from 'react';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Grid2X2 } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { Alert } from "@/components/ui/alert";
+import { TicketStatusDialog } from "@/components/tickets/ticket-status-dialog";
+import type { Locker } from '@/types/locker';
 
 interface TicketSearchProps {
-  lockers: Locker[]
-  onEmergencyRegistration: () => void
+  lockers: Locker[];
+  onEmergencyRegistration: () => void;
 }
 
 export function TicketSearch({ lockers, onEmergencyRegistration }: TicketSearchProps) {
-  const [searchValue, setSearchValue] = useState("")
-  const [showAlert, setShowAlert] = useState(false)
-  const [alertMessage, setAlertMessage] = useState("")
-  const [showStatus, setShowStatus] = useState(false)
+  const [searchValue, setSearchValue] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showStatus, setShowStatus] = useState(false);
 
   const handleSearch = () => {
-    if (!searchValue) return
+    if (!searchValue) return;
 
-    const ticketNumber = searchValue.padStart(3, '0')
-    const ticket = `T-${ticketNumber}`
+    const ticketNumber = searchValue.padStart(3, '0');
+    const ticket = `LS-${ticketNumber}`;
     
-    let found = false
+    let found = false;
     for (const locker of lockers) {
-      const item = locker.items.find(item => item.ticket === ticket)
+      const item = locker.lockerDetails.find(item => item.ticketCode === ticket);
       if (item) {
-        found = true
-        setAlertMessage(`Ticket ${ticket} encontrado en Locker ${locker.id} - DNI: ${item.dni}`)
-        setShowAlert(true)
-        setTimeout(() => setShowAlert(false), 3000)
-        break
+        found = true;
+        setAlertMessage(`Ticket ${ticket} encontrado en Locker ${locker.id} - DNI: ${item.user.documentNumber}`);
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 3000);
+        break;
       }
     }
 
     if (!found) {
-      setAlertMessage(`Ticket ${ticket} no encontrado`)
-      setShowAlert(true)
-      setTimeout(() => setShowAlert(false), 3000)
+      setAlertMessage(`Ticket ${ticket} no encontrado`);
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 3000);
     }
 
-    setSearchValue("") 
+    setSearchValue(""); 
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSearch()
+      handleSearch();
     }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '')
+    const value = e.target.value.replace(/\D/g, '');
     if (value.length <= 3) {
-      setSearchValue(value)
+      setSearchValue(value);
     }
   }
 
@@ -64,12 +64,6 @@ export function TicketSearch({ lockers, onEmergencyRegistration }: TicketSearchP
     <div className="flex items-center gap-4">
       <div className="flex gap-2">
         <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <Search className="h-4 w-4 text-purple-400" />
-          </div>
-          <div className="absolute inset-y-0 left-9 flex items-center">
-            <span className="font-medium text-purple-500">T-</span>
-          </div>
           <Input
             type="text"
             value={searchValue}
@@ -113,9 +107,7 @@ export function TicketSearch({ lockers, onEmergencyRegistration }: TicketSearchP
           showAlert ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
-        <AlertDescription className="font-medium text-purple-700">
-          {alertMessage}
-        </AlertDescription>
+        {alertMessage}
       </Alert>
 
       {/* Status Dialog */}
