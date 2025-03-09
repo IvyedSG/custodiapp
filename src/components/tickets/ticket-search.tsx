@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Grid2X2 } from 'lucide-react';
+import { AlertCircle, Grid2X2,Search } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Alert } from "@/components/ui/alert";
 import { TicketStatusDialog } from "@/components/tickets/ticket-status-dialog";
@@ -24,7 +24,7 @@ export function TicketSearch({ lockers, onEmergencyRegistration }: TicketSearchP
     if (!searchValue) return;
 
     const ticketNumber = searchValue.padStart(3, '0');
-    const ticket = `LS-${ticketNumber}`;
+    const ticket = `TS-${ticketNumber}`;
     
     let found = false;
     for (const locker of lockers) {
@@ -64,6 +64,12 @@ export function TicketSearch({ lockers, onEmergencyRegistration }: TicketSearchP
     <div className="flex items-center gap-4">
       <div className="flex gap-2">
         <div className="relative">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+             <Search className="h-4 w-4 text-purple-400" />
+           </div>
+           <div className="absolute inset-y-0 left-9 flex items-center">
+             <span className="font-medium text-purple-500">TS-</span>
+           </div>
           <Input
             type="text"
             value={searchValue}

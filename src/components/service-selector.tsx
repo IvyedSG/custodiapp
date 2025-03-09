@@ -208,7 +208,8 @@ export function ServiceSelector() {
       )
 
       if (!response.ok) {
-        throw new Error("Error al comenzar el servicio")
+        const errorData = await response.json()
+        throw new Error(`Error al comenzar el servicio: ${errorData.message || response.statusText}`)
       }
 
       const data = await response.json()
@@ -225,7 +226,7 @@ export function ServiceSelector() {
       router.push(`/lockers?service=${serviceName}&staff=${user?.firstName} ${user?.lastName}`)
     } catch (err) {
       console.error("Error submitting form:", err)
-      setError("Ocurrió un error al procesar tu solicitud.")
+      setError(`Ocurrió un error al procesar tu solicitud: ${(err as Error).message}`)
     } finally {
       setIsLoading(false)
     }
