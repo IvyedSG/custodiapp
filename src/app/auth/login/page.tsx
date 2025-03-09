@@ -1,6 +1,21 @@
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/auth/login-form"
 
 export default function LoginPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const jwt = localStorage.getItem("jwt")
+    const sessionId = localStorage.getItem("sessionId")
+
+    if (jwt && sessionId) {
+      router.push("/lockers")
+    }
+  }, [router])
+
   return (
     <div className="flex min-h-screen w-full bg-gradient-to-br from-purple-50 via-white to-purple-100">
       <div className="container flex min-h-screen items-center justify-center">

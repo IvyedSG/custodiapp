@@ -101,7 +101,7 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("selectedServiceName")
       localStorage.removeItem("selectedStaff")
   
-      router.push("/")
+      router.push("/services")
     } catch (err) {
       console.error("Error ending service:", err)
     }
