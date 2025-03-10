@@ -66,7 +66,7 @@ export function releaseTicket(ticket: string): void {
 export function syncTicketsWithLockers(lockers: Locker[]) {
   console.log("Syncing tickets with lockers...")
   // Reset tickets
-  availableTickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => `LS-${String(i + 1).padStart(3, "0")}`)
+  availableTickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => `TS-${String(i + 1).padStart(3, "0")}`)
   assignedTickets = []
 
   // Mark tickets as assigned based on locker data
