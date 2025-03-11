@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import useSWR from "swr"
-import type { Locker } from "@/types/locker"
+import type { Locker, LockerDetail, User } from "@/types/locker"
 
 // Función para generar lockers de placeholder mientras se cargan los reales
 const generatePlaceholderLockers = (count: number): Locker[] => {
@@ -75,9 +75,19 @@ const fetchLockers = async (): Promise<Locker[]> => {
   return data
 }
 
+// TypeScript interface for check-in item
+interface CheckInItem {
+  documentNumber: number | string;
+  teamCode: string;
+  ticketCode: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+}
+
 export function useLockers() {
   // Usar datos locales como fallback inicial
-  const [initialData] = useState(() => getLocalLockers() || generatePlaceholderLockers(24))
+  const [initialData] = useState<Locker[]>(() => getLocalLockers() || generatePlaceholderLockers(24))
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<Locker[]>("lockers", fetchLockers, {
     fallbackData: initialData,
@@ -87,18 +97,148 @@ export function useLockers() {
     focusThrottleInterval: 10000, // 10 segundos
   })
 
+  // Optimistic updates function
+  const optimisticCheckIn = useCallback((lockerId: number, item: CheckInItem) => {
+    mutate(
+      (currentLockers: Locker[] | undefined) => {
+        if (!currentLockers) return currentLockers;
+        
+        return currentLockers.map(locker => {
+          if (locker.id === lockerId) {
+            // Create a new locker detail entry that matches LockerDetail type
+            const newDetail: LockerDetail = {
+              transactionId: Math.floor(Math.random() * 1000000), // Generate a temporary ID
+              lockerCode: locker.code,
+              teamCode: item.teamCode,
+              teamName: item.teamCode,
+              itemDescription: null,
+              inTime: new Date().toISOString(),
+              outTime: null,
+              ticketCode: item.ticketCode,
+              user: {
+                id: 0, // Temporary ID
+                documentNumber: typeof item.documentNumber === 'number' 
+                  ? item.documentNumber.toString() 
+                  : item.documentNumber,
+                firstName: item.firstName || "Usuario",
+                lastName: item.lastName || "",
+                phoneNumber: item.phoneNumber || "",
+              },
+            };
+            
+            // Add to locker details and increment currentItems
+            return {
+              ...locker,
+              lockerDetails: [...locker.lockerDetails, newDetail],
+              currentItems: (locker.currentItems || locker.lockerDetails.length) + 1
+            };
+          }
+          return locker;
+        });
+      },
+      false // Don't revalidate immediately
+    );
+    
+    // Save to localStorage for persistence
+    if (data) {
+      const updatedLockers = data.map(locker => {
+        if (locker.id === lockerId) {
+          const newDetail: LockerDetail = {
+            transactionId: Math.floor(Math.random() * 1000000), // Generate a temporary ID
+            lockerCode: locker.code,
+            teamCode: item.teamCode,
+            teamName: item.teamCode,
+            itemDescription: null,
+            inTime: new Date().toISOString(),
+            outTime: null,
+            ticketCode: item.ticketCode,
+            user: {
+              id: 0, // Temporary ID
+              documentNumber: typeof item.documentNumber === 'number' 
+                ? item.documentNumber.toString() 
+                : item.documentNumber,
+              firstName: item.firstName || "Usuario",
+              lastName: item.lastName || "",
+              phoneNumber: item.phoneNumber || "",
+            },
+          };
+          
+          return {
+            ...locker,
+            lockerDetails: [...locker.lockerDetails, newDetail],
+            currentItems: (locker.currentItems || locker.lockerDetails.length) + 1
+          };
+        }
+        return locker;
+      });
+      
+      localStorage.setItem("lockers", JSON.stringify(updatedLockers));
+    }
+  }, [data, mutate]);
+  
+  const optimisticCheckOut = useCallback((lockerId: number, ticketCode: string) => {
+    mutate(
+      (currentLockers: Locker[] | undefined) => {
+        if (!currentLockers) return currentLockers;
+        
+        return currentLockers.map(locker => {
+          if (locker.id === lockerId) {
+            const itemIndex = locker.lockerDetails.findIndex(item => item.ticketCode === ticketCode);
+            
+            if (itemIndex >= 0) {
+              // Remove the item from locker details
+              const updatedDetails = [...locker.lockerDetails];
+              updatedDetails.splice(itemIndex, 1);
+              
+              return {
+                ...locker,
+                lockerDetails: updatedDetails,
+                currentItems: Math.max(0, (locker.currentItems || locker.lockerDetails.length) - 1)
+              };
+            }
+          }
+          return locker;
+        });
+      },
+      false // Don't revalidate immediately
+    );
+    
+    // Save to localStorage for persistence
+    if (data) {
+      const updatedLockers = data.map(locker => {
+        if (locker.id === lockerId) {
+          const itemIndex = locker.lockerDetails.findIndex(item => item.ticketCode === ticketCode);
+          
+          if (itemIndex >= 0) {
+            const updatedDetails = [...locker.lockerDetails];
+            updatedDetails.splice(itemIndex, 1);
+            
+            return {
+              ...locker,
+              lockerDetails: updatedDetails,
+              currentItems: Math.max(0, (locker.currentItems || locker.lockerDetails.length) - 1)
+            };
+          }
+        }
+        return locker;
+      });
+      
+      localStorage.setItem("lockers", JSON.stringify(updatedLockers));
+    }
+  }, [data, mutate]);
+
   // Escuchar eventos de actualización
   useEffect(() => {
     const handleLockersUpdated = () => {
-      mutate()
+      mutate();
     }
 
-    window.addEventListener("lockersUpdated", handleLockersUpdated)
+    window.addEventListener("lockersUpdated", handleLockersUpdated);
 
     return () => {
-      window.removeEventListener("lockersUpdated", handleLockersUpdated)
+      window.removeEventListener("lockersUpdated", handleLockersUpdated);
     }
-  }, [mutate])
+  }, [mutate]);
 
   return {
     lockers: data,
@@ -106,5 +246,7 @@ export function useLockers() {
     isRefreshing: isValidating,
     error,
     mutate,
+    optimisticCheckIn,
+    optimisticCheckOut,
   }
 }

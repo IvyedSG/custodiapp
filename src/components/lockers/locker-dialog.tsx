@@ -191,6 +191,10 @@ export function LockerDialog({ isOpen, setIsOpen, locker, onAddItem, viewOnly = 
       documentNumber: Number.parseInt(user.documentNumber),
       teamCode: user.suggestedTeam,
       ticketCode: finalTicket,
+      // Add these fields for optimistic updates
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber || ""
     }
 
     const success = await performCheckIn(locker.id, [checkInItem])

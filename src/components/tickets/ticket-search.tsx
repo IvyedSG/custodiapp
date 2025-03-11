@@ -79,6 +79,16 @@ export function TicketSearch({ lockers, onEmergencyRegistration }: TicketSearchP
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
       
+      // Dispatch event to highlight the locker
+      window.dispatchEvent(
+        new CustomEvent("highlightLocker", {
+          detail: {
+            lockerId: parseInt(lockerNumber, 10),
+            duration: 1000 // Duration in ms (10 seconds)
+          }
+        })
+      );
+      
     } catch (err) {
       console.error("Error en la búsqueda del ticket:", err);
       setAlertMessage(`Error al buscar ticket ${ticket}`);

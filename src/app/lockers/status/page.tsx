@@ -19,6 +19,7 @@ import { LockerDialog } from '@/components/lockers/locker-dialog'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Locker } from "@/types/locker"
 import { getLockerStatus } from "@/lib/utils"
+import { useLockers } from "@/hooks/use-lockers"
 
 // Define a proper type for emergency items instead of using 'any'
 interface EmergencyItem {
@@ -30,32 +31,12 @@ interface EmergencyItem {
 }
 
 export default function LockersStatusPage() {
-  const [lockers, setLockers] = useState<Locker[]>([])
+  const { lockers, optimisticCheckOut } = useLockers();
   const [selectedLocker, setSelectedLocker] = useState<Locker | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [emergencyItems, setEmergencyItems] = useState<EmergencyItem[]>([])
   const [loadingDeliveries, setLoadingDeliveries] = useState<{[key: string]: boolean}>({})
   const [isAnyDeliveryInProgress, setIsAnyDeliveryInProgress] = useState(false)
-
-  useEffect(() => {
-    const loadLockers = () => {
-      const savedLockers = localStorage.getItem('lockers')
-      if (savedLockers) {
-        setLockers(JSON.parse(savedLockers, (key, value) => 
-          key === 'timestamp' ? new Date(value) : value
-        ))
-      }
-    }
-
-    loadLockers()
-    window.addEventListener('storage', loadLockers)
-    window.addEventListener('lockersUpdated', loadLockers)
-
-    return () => {
-      window.removeEventListener('storage', loadLockers)
-      window.removeEventListener('lockersUpdated', loadLockers)
-    }
-  }, [])
 
   useEffect(() => {
     const loadEmergencyItems = () => {
@@ -74,9 +55,9 @@ export default function LockersStatusPage() {
   }, [])
 
   const handleMarkAsDelivered = async (lockerId: number, itemIndex: number, isEmergency: boolean = false) => {
-    const deliveryKey = isEmergency ? `emergency-${itemIndex}` : `locker-${lockerId}-${itemIndex}`
-    setLoadingDeliveries(prev => ({ ...prev, [deliveryKey]: true }))
-    setIsAnyDeliveryInProgress(true)
+    const deliveryKey = isEmergency ? `emergency-${itemIndex}` : `locker-${lockerId}-${itemIndex}`;
+    setLoadingDeliveries(prev => ({ ...prev, [deliveryKey]: true }));
+    setIsAnyDeliveryInProgress(true);
     
     try {
       if (isEmergency) {
@@ -96,13 +77,31 @@ export default function LockersStatusPage() {
         setEmergencyItems(updatedEmergencyItems);
         localStorage.setItem('emergencyItems', JSON.stringify(updatedEmergencyItems));
       } else {
-        const ticketToCheckout = lockers.find(locker => locker.id === lockerId)?.lockerDetails[itemIndex]?.ticketCode;
+        const ticketToCheckout = lockers?.find(locker => locker.id === lockerId)?.lockerDetails[itemIndex]?.ticketCode;
         
         if (!ticketToCheckout) {
           console.error("No se encontró el ticket para hacer checkout");
           return;
         }
         
+        // Apply optimistic update first
+        optimisticCheckOut(lockerId, ticketToCheckout);
+        
+        // Store delivered item in activities
+        const locker = lockers?.find(l => l.id === lockerId);
+        if (locker) {
+          const deliveredItem = locker.lockerDetails[itemIndex];
+          const activities = JSON.parse(localStorage.getItem('activities') || '[]');
+          activities.unshift({
+            type: 'remove',
+            lockerId: locker.id,
+            item: deliveredItem,
+            timestamp: new Date()
+          });
+          localStorage.setItem('activities', JSON.stringify(activities));
+        }
+        
+        // Now perform the actual API call
         const sessionId = localStorage.getItem("sessionId");
         const jwt = localStorage.getItem("jwt");
 
@@ -110,8 +109,6 @@ export default function LockersStatusPage() {
           console.error("No sessionId o jwt encontrados");
           return;
         }
-
-        await new Promise(resolve => setTimeout(resolve, 500));
 
         const response = await fetch(
           `https://cdv-custody-api.onrender.com/cdv-custody/api/v1/lockers/${lockerId}/transactions/check-out`,
@@ -132,36 +129,18 @@ export default function LockersStatusPage() {
           throw new Error("Error al entregar el item");
         }
         
-        const updatedLockers = lockers.map(locker => {
-          if (locker.id === lockerId) {
-            const updatedItems = [...locker.lockerDetails];
-            const deliveredItem = updatedItems[itemIndex];
-            
-            const activities = JSON.parse(localStorage.getItem('activities') || '[]');
-            activities.unshift({
-              type: 'remove',
-              lockerId: locker.id,
-              item: deliveredItem,
-              timestamp: new Date()
-            });
-            localStorage.setItem('activities', JSON.stringify(activities));
-            
-            updatedItems.splice(itemIndex, 1);
-            return { ...locker, lockerDetails: updatedItems };
-          }
-          return locker;
-        });
-
-        setLockers(updatedLockers);
-        localStorage.setItem('lockers', JSON.stringify(updatedLockers));
-        
-        window.dispatchEvent(new Event('lockersUpdated'));
+        // Refresh data in the background to ensure consistency
+        setTimeout(() => {
+          window.dispatchEvent(new Event('lockersUpdated'));
+        }, 1000);
       }
     } catch (error) {
       console.error("Error al entregar el item:", error);
+      // Refresh on error to restore correct state
+      window.dispatchEvent(new Event('lockersUpdated'));
     } finally {
-      setLoadingDeliveries(prev => ({ ...prev, [deliveryKey]: false }))
-      setIsAnyDeliveryInProgress(false)
+      setLoadingDeliveries(prev => ({ ...prev, [deliveryKey]: false }));
+      setIsAnyDeliveryInProgress(false);
     }
   }
 
@@ -214,7 +193,7 @@ export default function LockersStatusPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {lockers.map((locker) => {
+              {(lockers ?? []).map((locker) => {
                 const status = getLockerStatus(locker.lockerDetails.length)
                 const isLockerDeliveryInProgress = locker.lockerDetails.some((_, itemIndex) => 
                   loadingDeliveries[`locker-${locker.id}-${itemIndex}`]

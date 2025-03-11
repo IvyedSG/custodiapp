@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Lock, Unlock, Package } from "lucide-react"
 import type { Locker } from "@/types/locker"
 import { getLockerStatus, getStatusColor } from "@/lib/utils"
+import { useState, useEffect } from "react"
 
 interface LockerButtonProps {
   locker: Locker
@@ -22,10 +23,37 @@ export function LockerButton({
 }: LockerButtonProps) {
   const status = getLockerStatus(locker.lockerDetails.length)
   const statusColor = getStatusColor(status)
+  const [isHighlighted, setIsHighlighted] = useState(false)
+
+  // Listen for highlight events
+  useEffect(() => {
+    const handleHighlight = (event: CustomEvent) => {
+      if (event.detail.lockerId === locker.id) {
+        setIsHighlighted(true)
+        
+        // Reset the highlight after the duration
+        const timeout = setTimeout(() => {
+          setIsHighlighted(false)
+        }, event.detail.duration || 1000)
+        
+        return () => clearTimeout(timeout)
+      }
+    }
+
+    // Add event listener with type assertion
+    window.addEventListener("highlightLocker", handleHighlight as EventListener)
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener("highlightLocker", handleHighlight as EventListener)
+    }
+  }, [locker.id])
 
   // Si está cargando, mostrar un estado visual ligeramente diferente
   const buttonClass = isLoading
     ? `${statusColor} opacity-90 cursor-default`
+    : isHighlighted
+    ? `${statusColor} hover:shadow-xl transition-all duration-200 animate-pulse shadow-lg ring-4 ring-yellow-400`
     : `${statusColor} hover:shadow-xl transition-all duration-200`
 
   // Ajustar tamaños según el dispositivo
