@@ -56,15 +56,29 @@ export function ServiceSelector() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const router = useRouter()
 
+  // Add a function to check JWT and redirect if needed
+  const checkAndRedirectIfNoJWT = () => {
+    const jwt = localStorage.getItem("jwt")
+    if (!jwt) {
+      console.log("No JWT found, redirecting to login")
+      router.push("/")
+      return false
+    }
+    return true
+  }
+
   useEffect(() => {
+    // Check JWT on component mount
+    if (!checkAndRedirectIfNoJWT()) return
+
     const fetchServices = async () => {
       setIsLoadingServices(true)
       setError(null)
 
       const jwt = localStorage.getItem("jwt")
       if (!jwt) {
-        setError("No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.")
-        setIsLoadingServices(false)
+        // This is actually redundant now, but keeping as a safeguard
+        router.push("/")
         return
       }
 
@@ -94,7 +108,7 @@ export function ServiceSelector() {
     }
 
     fetchServices()
-  }, [])
+  }, [router])
 
   useEffect(() => {
     if (dni.length === 8) {
@@ -107,13 +121,16 @@ export function ServiceSelector() {
   }, [dni])
 
   const fetchUser = async (documentNumber: string) => {
+    // Check JWT before fetching
+    if (!checkAndRedirectIfNoJWT()) return
+    
     setIsLoadingUser(true)
     setUserError(null)
 
     const jwt = localStorage.getItem("jwt")
+    // This check is redundant now, but keeping as a safeguard
     if (!jwt) {
-      setUserError("No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.")
-      setIsLoadingUser(false)
+      router.push("/")
       return
     }
 
@@ -185,12 +202,16 @@ export function ServiceSelector() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    
+    // Check JWT before submitting
+    if (!checkAndRedirectIfNoJWT()) return
+    
     setIsLoading(true)
 
     const jwt = localStorage.getItem("jwt")
+    // This check is redundant now, but keeping as a safeguard
     if (!jwt) {
-      setError("No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.")
-      setIsLoading(false)
+      router.push("/")
       return
     }
 

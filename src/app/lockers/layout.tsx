@@ -3,7 +3,7 @@
 import type React from "react"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect, Suspense } from "react"
-import { Box, Activity, LineChart, Menu, X } from "lucide-react"
+import { Box, Activity, LineChart, Menu, X, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useSearchParams, useRouter } from "next/navigation"
 import { TicketSearch } from "@/components/tickets/ticket-search"
@@ -21,6 +21,7 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
   const [lockers, setLockers] = useState<Locker[]>([])
   const [isEmergencyDialogOpen, setIsEmergencyDialogOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isEndingService, setIsEndingService] = useState(false)
 
   const isMobile = useMediaQuery("(max-width: 767px)")
   const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1023px)")
@@ -45,6 +46,7 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
               "Session-id": sessionId,
               Authorization: `Bearer ${jwt}`,
             },
+            cache: "no-store",
           },
         )
 
@@ -56,6 +58,7 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
 
         const data = await response.json()
         setLockers(data)
+        localStorage.setItem("lockers", JSON.stringify(data))
       } catch (err) {
         console.error("Error fetching lockers:", err)
       }
@@ -94,12 +97,17 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
   }, [])
 
   const handleEndService = async () => {
+    if (isEndingService) return
+    
+    setIsEndingService(true)
+    
     const sessionId = localStorage.getItem("sessionId")
     const serviceId = localStorage.getItem("selectedService")
     const jwt = localStorage.getItem("jwt")
 
     if (!sessionId || !serviceId || !jwt) {
       console.error("No sessionId, serviceId, or jwt found")
+      setIsEndingService(false)
       return
     }
 
@@ -130,6 +138,7 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
       router.push("/services")
     } catch (err) {
       console.error("Error ending service:", err)
+      setIsEndingService(false)
     }
   }
 
@@ -156,7 +165,6 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2 md:gap-4">
           {(serviceName || staff) && (
             <>
-              {/* Versión para móvil y tablet */}
               {(isMobile || isTablet) && (
                 <Sheet>
                   <SheetTrigger asChild>
@@ -169,19 +177,29 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
                     <div className="flex flex-col gap-4">
                       <div className="rounded-lg bg-purple-50 p-4 text-center">
                         {serviceName && (
-                          <div className="mb-2 text-base font-medium text-purple-800">{serviceName} servicio</div>
+                          <div className="mb-2 text-base font-medium text-purple-800">{serviceName}</div>
                         )}
                         {staff && <div className="text-sm text-purple-600">Encargado: {staff}</div>}
                       </div>
-                      <Button onClick={handleEndService} className="w-full bg-red-600 text-white hover:bg-red-700">
-                        Terminar Servicio
+                      <Button 
+                        onClick={handleEndService}
+                        disabled={isEndingService} 
+                        className="w-full bg-red-600 text-white hover:bg-red-700 disabled:opacity-70"
+                      >
+                        {isEndingService ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Terminando...
+                          </>
+                        ) : (
+                          "Terminar Servicio"
+                        )}
                       </Button>
                     </div>
                   </SheetContent>
                 </Sheet>
               )}
 
-              {/* Versión para desktop */}
               {!isMobile && !isTablet && (
                 <>
                   <div className="hidden md:flex rounded-lg bg-purple-600 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white">
@@ -191,16 +209,23 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
                   </div>
                   <Button
                     onClick={handleEndService}
-                    className="hidden md:flex rounded-lg bg-red-600 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white hover:bg-red-700"
+                    disabled={isEndingService}
+                    className="hidden md:flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white hover:bg-red-700 disabled:opacity-70"
                   >
-                    Terminar Servicio
+                    {isEndingService ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Terminando...
+                      </>
+                    ) : (
+                      "Terminar Servicio"
+                    )}
                   </Button>
                 </>
               )}
             </>
           )}
 
-          {/* Menú móvil */}
           {isMobile && (
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
@@ -258,7 +283,6 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1 overflow-auto p-2 sm:p-3 md:p-4 lg:p-6">
         <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm">
-          {/* Navegación de pestañas - oculta en móvil */}
           <div className="hidden md:grid w-full grid-cols-3 border-b">
             {navLinks.map((link) => {
               const Icon = link.icon

@@ -10,8 +10,8 @@ const generatePlaceholderLockers = (count: number): Locker[] => {
     .fill(null)
     .map((_, index) => ({
       id: index + 1,
-      code: `L${index + 1}`,
-      type: "STANDARD",
+      code: `LS-${index + 1}`,
+      type: "LOCKER",
       capacity: 3,
       currentItems: 0,
       description: null,

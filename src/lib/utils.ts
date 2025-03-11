@@ -21,18 +21,23 @@ function initializeTickets() {
     // ✅ Verifica que se ejecuta en el cliente
     const savedState = localStorage.getItem("ticketState")
     if (savedState) {
-      const { available, assigned } = JSON.parse(savedState)
-      return { availableTickets: available, assignedTickets: assigned }
+      const { available, assigned, reserved } = JSON.parse(savedState)
+      return { 
+        availableTickets: available, 
+        assignedTickets: assigned,
+        tempReservedTickets: reserved || [] 
+      }
     }
   }
 
   return {
-    availableTickets: Array.from({ length: TOTAL_TICKETS }, (_, i) => `LS-${String(i + 1).padStart(3, "0")}`),
+    availableTickets: Array.from({ length: TOTAL_TICKETS }, (_, i) => `TS-${i + 1}`),
     assignedTickets: [],
+    tempReservedTickets: [],
   }
 }
 
-let { availableTickets, assignedTickets } = initializeTickets()
+let { availableTickets, assignedTickets, tempReservedTickets } = initializeTickets()
 
 function saveTicketState() {
   localStorage.setItem(
@@ -40,48 +45,287 @@ function saveTicketState() {
     JSON.stringify({
       available: availableTickets,
       assigned: assignedTickets,
+      reserved: tempReservedTickets,
     }),
   )
 }
 
-export function assignTicket(): string | null {
+/**
+ * Reserva temporalmente un ticket para previsualización
+ */
+export function reserveTicketForPreview(): string | null {
   if (availableTickets.length === 0) return null
+  
+  // Ordenar tickets disponibles por número para siempre asignar el más bajo
+  availableTickets.sort((a: string, b: string) => {
+    const numA = parseInt(a.split('-')[1])
+    const numB = parseInt(b.split('-')[1])
+    return numA - numB
+  })
+  
+  // Tomar el ticket con el número más bajo
   const ticket = availableTickets.shift()!
-  assignedTickets.push(ticket)
+  
+  // Añadirlo a la lista de reservados temporalmente
+  tempReservedTickets.push(ticket)
   saveTicketState()
-  console.log("Ticket assigned:", ticket)
+  console.log("Ticket temporarily reserved:", ticket)
   return ticket
 }
 
+/**
+ * Asigna el ticket previamente reservado o busca uno nuevo si no hay reservado
+ */
+export function assignTicket(reservedTicket?: string): string | null {
+  // Si se proporciona un ticket reservado, eliminarlo de la lista de reservados y asignarlo
+  if (reservedTicket && tempReservedTickets.includes(reservedTicket)) {
+    const index = tempReservedTickets.indexOf(reservedTicket)
+    tempReservedTickets.splice(index, 1)
+    assignedTickets.push(reservedTicket)
+    saveTicketState()
+    console.log("Reserved ticket assigned:", reservedTicket)
+    return reservedTicket
+  }
+  
+  // Si no hay ticket reservado, buscar el menor disponible
+  if (availableTickets.length === 0) return null
+  
+  // Ordenar tickets disponibles por número para siempre asignar el más bajo
+  availableTickets.sort((a: string, b: string) => {
+    const numA = parseInt(a.split('-')[1])
+    const numB = parseInt(b.split('-')[1])
+    return numA - numB
+  })
+  
+  const ticket = availableTickets.shift()!
+  assignedTickets.push(ticket)
+  saveTicketState()
+  console.log("New ticket assigned:", ticket)
+  return ticket
+}
+
+/**
+ * Libera todos los tickets temporalmente reservados
+ */
+export function releaseReservedTickets(): void {
+  if (tempReservedTickets.length === 0) return
+  
+  console.log("Releasing all temporarily reserved tickets:", tempReservedTickets)
+  
+  // Devolver todos los tickets reservados a la lista de disponibles
+  for (const ticket of tempReservedTickets) {
+    // Insertar en orden
+    const ticketNumber = parseInt(ticket.split('-')[1])
+    let insertIndex = 0
+    
+    while (
+      insertIndex < availableTickets.length &&
+      parseInt(availableTickets[insertIndex].split('-')[1]) < ticketNumber
+    ) {
+      insertIndex++
+    }
+    
+    availableTickets.splice(insertIndex, 0, ticket)
+  }
+  
+  tempReservedTickets = []
+  saveTicketState()
+}
+
+/**
+ * Libera un ticket y lo vuelve disponible para asignación
+ */
 export function releaseTicket(ticket: string): void {
+  // Primero verificar si está en la lista de reservados temporalmente
+  const tempIndex = tempReservedTickets.indexOf(ticket)
+  if (tempIndex !== -1) {
+    tempReservedTickets.splice(tempIndex, 1)
+    
+    // Insertar el ticket en la posición correcta en los disponibles
+    if (availableTickets.length === 0) {
+      availableTickets.push(ticket)
+    } else {
+      const ticketNumber = parseInt(ticket.split('-')[1])
+      
+      // Encontrar la posición correcta para insertar el ticket
+      let insertIndex = 0
+      while (
+        insertIndex < availableTickets.length &&
+        parseInt(availableTickets[insertIndex].split('-')[1]) < ticketNumber
+      ) {
+        insertIndex++
+      }
+      
+      // Insertar el ticket en la posición ordenada
+      availableTickets.splice(insertIndex, 0, ticket)
+    }
+    
+    saveTicketState()
+    console.log("Reserved ticket released:", ticket)
+    return
+  }
+  
+  // Si no está en la lista de reservados, buscar en los asignados
   const index = assignedTickets.indexOf(ticket)
   if (index !== -1) {
     assignedTickets.splice(index, 1)
-    availableTickets.unshift(ticket)
+    
+    // Insertar el ticket en la posición correcta para mantener el orden
+    if (availableTickets.length === 0) {
+      availableTickets.push(ticket)
+    } else {
+      const ticketNumber = parseInt(ticket.split('-')[1])
+      
+      // Encontrar la posición correcta para insertar el ticket
+      let insertIndex = 0
+      while (
+        insertIndex < availableTickets.length &&
+        parseInt(availableTickets[insertIndex].split('-')[1]) < ticketNumber
+      ) {
+        insertIndex++
+      }
+      
+      // Insertar el ticket en la posición ordenada
+      availableTickets.splice(insertIndex, 0, ticket)
+    }
+    
     saveTicketState()
-    console.log("Ticket released:", ticket)
+    console.log("Assigned ticket released:", ticket)
   }
 }
 
+/**
+ * Sincroniza los tickets con el estado actual de los lockers
+ */
 export function syncTicketsWithLockers(lockers: Locker[]) {
   console.log("Syncing tickets with lockers...")
-  // Reset tickets
-  availableTickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => `TS-${String(i + 1).padStart(3, "0")}`)
-  assignedTickets = []
-
-  // Mark tickets as assigned based on locker data
+  
+  // Crear un conjunto de todos los tickets
+  const allTickets = new Set(Array.from({ length: TOTAL_TICKETS }, (_, i) => `TS-${i + 1}`))
+  
+  // Conjunto de tickets asignados actualmente
+  const currentlyAssigned = new Set<string>()
+  
+  // Marcar tickets como asignados basado en los datos de los lockers
   lockers.forEach((locker) => {
-    locker.lockerDetails.forEach((item) => {
-      const ticketIndex = availableTickets.indexOf(item.ticketCode)
-      if (ticketIndex !== -1) {
-        const ticket = availableTickets.splice(ticketIndex, 1)[0]
-        assignedTickets.push(ticket)
-      }
-    })
+    if (locker.lockerDetails && Array.isArray(locker.lockerDetails)) {
+      locker.lockerDetails.forEach((item) => {
+        if (item.ticketCode && typeof item.ticketCode === 'string' && item.ticketCode.trim() !== '') {
+          currentlyAssigned.add(item.ticketCode.trim())
+          console.log("Found assigned ticket:", item.ticketCode)
+        }
+      })
+    }
   })
-
+  
+  // Los tickets disponibles son los que no están asignados
+  const availableTicketList: string[] = []
+  allTickets.forEach(ticket => {
+    if (!currentlyAssigned.has(ticket)) {
+      availableTicketList.push(ticket)
+    }
+  })
+  
+  // Ordenar los tickets disponibles para mantener consistencia
+  availableTicketList.sort((a, b) => {
+    const numA = parseInt(a.split('-')[1])
+    const numB = parseInt(b.split('-')[1])
+    return numA - numB
+  })
+  
+  // Actualizar las listas globales
+  availableTickets = availableTicketList
+  assignedTickets = Array.from(currentlyAssigned)
+  tempReservedTickets = [] // Reset temporary reservations
+  
   saveTicketState()
   console.log("Sync complete. Available tickets:", availableTickets.length, "Assigned tickets:", assignedTickets.length)
+  console.log("First 10 available tickets:", availableTickets.slice(0, 10).map((t: string) => parseInt(t.split('-')[1])).join(', '))
+}
+
+/**
+ * Synchronizes the local ticket state with the server-side state
+ * Returns a promise that resolves with the synchronized available tickets
+ */
+export async function syncTicketsWithServer(): Promise<string[] | null> {
+  try {
+    const sessionId = localStorage.getItem("sessionId")
+    const jwt = localStorage.getItem("jwt")
+
+    if (!sessionId || !jwt) {
+      console.error("No sessionId or jwt found")
+      return null
+    }
+
+    const response = await fetch(
+      "https://cdv-custody-api.onrender.com/cdv-custody/api/v1/tickets/active",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Session-id": sessionId,
+          Authorization: `Bearer ${jwt}`,
+        },
+      }
+    )
+
+    if (!response.ok) throw new Error("Error fetching tickets")
+    
+    const data = await response.json()
+    
+    // Create sets for better performance when checking status
+    const allTickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => `TS-${i + 1}`)
+    const serverAssignedTickets = new Set(
+      data
+        .filter((ticket: any) => ticket.status === "IN_USE")
+        .map((ticket: any) => ticket.code)
+    )
+    
+    // Update local ticket arrays based on server data
+    availableTickets = allTickets.filter(ticket => !serverAssignedTickets.has(ticket))
+    assignedTickets = Array.from(serverAssignedTickets)
+    tempReservedTickets = [] // Clear any temporary reservations
+    
+    // Sort available tickets to ensure we always get the lowest number
+    availableTickets.sort((a: string, b: string) => {
+      const numA = parseInt(a.split('-')[1])
+      const numB = parseInt(b.split('-')[1])
+      return numA - numB
+    })
+    
+    saveTicketState() // Save the synchronized state
+    console.log("Synced with server. Available tickets:", availableTickets.length, 
+                "Assigned tickets:", assignedTickets.length)
+    
+    return [...availableTickets] // Return a copy of the synchronized available tickets
+  } catch (err) {
+    console.error("Error synchronizing tickets with server:", err)
+    return null
+  }
+}
+
+/**
+ * Reserva temporalmente un ticket para previsualización
+ * Ahora con sincronización con el servidor
+ */
+export async function reserveTicketForPreviewAsync(): Promise<string | null> {
+  // Synchronize with server first
+  await syncTicketsWithServer()
+  
+  // Now use the updated local state to get the lowest available ticket
+  return reserveTicketForPreview()
+}
+
+/**
+ * Asigna el ticket previamente reservado o busca uno nuevo si no hay reservado
+ * Ahora con sincronización con el servidor
+ */
+export async function assignTicketAsync(reservedTicket?: string): Promise<string | null> {
+  // Synchronize with server first
+  await syncTicketsWithServer()
+  
+  // Now use the updated local state
+  return assignTicket(reservedTicket)
 }
 
 // ==========================================

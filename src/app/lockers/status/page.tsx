@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Lock, Unlock, Package, Eye, Check, Ticket } from 'lucide-react'
+import { Lock, Unlock, Package, Eye, Check, Ticket, Loader2 } from 'lucide-react'
 import { LockerDialog } from '@/components/lockers/locker-dialog'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Locker, LockerDetail } from "@/types/locker"
@@ -25,6 +25,8 @@ export default function LockersStatusPage() {
   const [selectedLocker, setSelectedLocker] = useState<Locker | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [emergencyItems, setEmergencyItems] = useState<any[]>([])
+  const [loadingDeliveries, setLoadingDeliveries] = useState<{[key: string]: boolean}>({})
+  const [isAnyDeliveryInProgress, setIsAnyDeliveryInProgress] = useState(false)
 
   useEffect(() => {
     const loadLockers = () => {
@@ -62,49 +64,96 @@ export default function LockersStatusPage() {
     }
   }, [])
 
-  const handleMarkAsDelivered = (lockerId: number, itemIndex: number, isEmergency: boolean = false) => {
-    if (isEmergency) {
-      const updatedEmergencyItems = [...emergencyItems];
-      const deliveredItem = updatedEmergencyItems[itemIndex];
-      
-      const activities = JSON.parse(localStorage.getItem('activities') || '[]');
-      activities.unshift({
-        type: 'remove',
-        item: deliveredItem,
-        timestamp: new Date(),
-        isEmergency: true
-      });
-      localStorage.setItem('activities', JSON.stringify(activities));
-      
-      updatedEmergencyItems.splice(itemIndex, 1);
-      setEmergencyItems(updatedEmergencyItems);
-      localStorage.setItem('emergencyItems', JSON.stringify(updatedEmergencyItems));
-    } else {
-      const updatedLockers = lockers.map(locker => {
-        if (locker.id === lockerId) {
-          const updatedItems = [...locker.lockerDetails];
-          const deliveredItem = updatedItems[itemIndex];
-         
-          const activities = JSON.parse(localStorage.getItem('activities') || '[]');
-          activities.unshift({
-            type: 'remove',
-            lockerId: locker.id,
-            item: deliveredItem,
-            timestamp: new Date()
-          });
-          localStorage.setItem('activities', JSON.stringify(activities));
-          
-          updatedItems.splice(itemIndex, 1);
-          return { ...locker, lockerDetails: updatedItems };
+  const handleMarkAsDelivered = async (lockerId: number, itemIndex: number, isEmergency: boolean = false) => {
+    const deliveryKey = isEmergency ? `emergency-${itemIndex}` : `locker-${lockerId}-${itemIndex}`
+    setLoadingDeliveries(prev => ({ ...prev, [deliveryKey]: true }))
+    setIsAnyDeliveryInProgress(true)
+    
+    try {
+      if (isEmergency) {
+        const updatedEmergencyItems = [...emergencyItems];
+        const deliveredItem = updatedEmergencyItems[itemIndex];
+        
+        const activities = JSON.parse(localStorage.getItem('activities') || '[]');
+        activities.unshift({
+          type: 'remove',
+          item: deliveredItem,
+          timestamp: new Date(),
+          isEmergency: true
+        });
+        localStorage.setItem('activities', JSON.stringify(activities));
+        
+        updatedEmergencyItems.splice(itemIndex, 1);
+        setEmergencyItems(updatedEmergencyItems);
+        localStorage.setItem('emergencyItems', JSON.stringify(updatedEmergencyItems));
+      } else {
+        const ticketToCheckout = lockers.find(locker => locker.id === lockerId)?.lockerDetails[itemIndex]?.ticketCode;
+        
+        if (!ticketToCheckout) {
+          console.error("No se encontró el ticket para hacer checkout");
+          return;
         }
-        return locker;
-      });
+        
+        const sessionId = localStorage.getItem("sessionId");
+        const jwt = localStorage.getItem("jwt");
 
-      setLockers(updatedLockers);
-      localStorage.setItem('lockers', JSON.stringify(updatedLockers));
+        if (!sessionId || !jwt) {
+          console.error("No sessionId o jwt encontrados");
+          return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const response = await fetch(
+          `https://cdv-custody-api.onrender.com/cdv-custody/api/v1/lockers/${lockerId}/transactions/check-out`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Session-id": sessionId,
+              Authorization: `Bearer ${jwt}`,
+            },
+            body: JSON.stringify([ticketToCheckout]),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Error en el checkout:", errorText);
+          throw new Error("Error al entregar el item");
+        }
+        
+        const updatedLockers = lockers.map(locker => {
+          if (locker.id === lockerId) {
+            const updatedItems = [...locker.lockerDetails];
+            const deliveredItem = updatedItems[itemIndex];
+            
+            const activities = JSON.parse(localStorage.getItem('activities') || '[]');
+            activities.unshift({
+              type: 'remove',
+              lockerId: locker.id,
+              item: deliveredItem,
+              timestamp: new Date()
+            });
+            localStorage.setItem('activities', JSON.stringify(activities));
+            
+            updatedItems.splice(itemIndex, 1);
+            return { ...locker, lockerDetails: updatedItems };
+          }
+          return locker;
+        });
+
+        setLockers(updatedLockers);
+        localStorage.setItem('lockers', JSON.stringify(updatedLockers));
+        
+        window.dispatchEvent(new Event('lockersUpdated'));
+      }
+    } catch (error) {
+      console.error("Error al entregar el item:", error);
+    } finally {
+      setLoadingDeliveries(prev => ({ ...prev, [deliveryKey]: false }))
+      setIsAnyDeliveryInProgress(false)
     }
-
-    window.dispatchEvent(new Event('lockersUpdated'));
   }
 
   const getStatusBadge = (status: string) => {
@@ -120,7 +169,7 @@ export default function LockersStatusPage() {
         return (
           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
             <Package className="mr-1 h-3 w-3" />
-            Semi-lleno
+            Semi
           </Badge>
         )
       case 'full':
@@ -158,6 +207,10 @@ export default function LockersStatusPage() {
             <TableBody>
               {lockers.map((locker, index) => {
                 const status = getLockerStatus(locker.lockerDetails.length)
+                const isLockerDeliveryInProgress = locker.lockerDetails.some((_, itemIndex) => 
+                  loadingDeliveries[`locker-${locker.id}-${itemIndex}`]
+                );
+                
                 return (
                   <TableRow key={locker.id}>
                     <TableCell className="font-medium">
@@ -210,18 +263,35 @@ export default function LockersStatusPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-2">
-                        {locker.lockerDetails.map((item, itemIndex) => (
-                          <Button
-                            key={item.ticketCode}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleMarkAsDelivered(locker.id, itemIndex, false)}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50 gap-2"
-                          >
-                            <Check className="h-4 w-4" />
-                            Entregar {item.ticketCode}
-                          </Button>
-                        ))}
+                        {locker.lockerDetails.map((item, itemIndex) => {
+                          const deliveryKey = `locker-${locker.id}-${itemIndex}`;
+                          const isLoading = loadingDeliveries[deliveryKey];
+                          
+                          return (
+                            <Button
+                              key={item.ticketCode}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleMarkAsDelivered(locker.id, itemIndex, false)}
+                              disabled={isLoading || (isAnyDeliveryInProgress && !isLoading)}
+                              className={`text-green-600 hover:text-green-700 hover:bg-green-50 gap-2 ${
+                                isAnyDeliveryInProgress && !isLoading ? "opacity-50 cursor-not-allowed" : ""
+                              }`}
+                            >
+                              {isLoading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Entregando...
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="h-4 w-4" />
+                                  Entregar {item.ticketCode}
+                                </>
+                              )}
+                            </Button>
+                          );
+                        })}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -247,26 +317,43 @@ export default function LockersStatusPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {emergencyItems.map((item, index) => (
-                <TableRow key={item.ticket}>
-                  <TableCell className="font-medium">{item.ticket}</TableCell>
-                  <TableCell>{item.dni}</TableCell>
-                  <TableCell>{item.location}</TableCell>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>{format(new Date(item.timestamp), "d 'de' MMMM 'a las' HH:mm", { locale: es })}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleMarkAsDelivered(lockers[0].id, index, true)} 
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                    >
-                      <Check className="mr-2 h-4 w-4" />
-                      Entregar
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {emergencyItems.map((item, index) => {
+                const deliveryKey = `emergency-${index}`;
+                const isLoading = loadingDeliveries[deliveryKey];
+                
+                return (
+                  <TableRow key={item.ticket}>
+                    <TableCell className="font-medium">{item.ticket}</TableCell>
+                    <TableCell>{item.dni}</TableCell>
+                    <TableCell>{item.location}</TableCell>
+                    <TableCell>{item.description}</TableCell>
+                    <TableCell>{format(new Date(item.timestamp), "d 'de' MMMM 'a las' HH:mm", { locale: es })}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMarkAsDelivered(lockers[0].id, index, true)}
+                        disabled={isLoading || (isAnyDeliveryInProgress && !isLoading)}
+                        className={`text-green-600 hover:text-green-700 hover:bg-green-50 ${
+                          isAnyDeliveryInProgress && !isLoading ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Entregando...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="mr-2 h-4 w-4" />
+                            Entregar
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

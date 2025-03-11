@@ -4,8 +4,6 @@ import { useState, useEffect, Suspense } from "react"
 import { motion } from "framer-motion"
 import { LockerGrid } from "@/components/lockers/locker-grid"
 import { LockerDialog } from "@/components/lockers/locker-dialog"
-import { syncTicketsWithLockers } from "@/lib/utils"
-import type { LockerDetail } from "@/types/locker"
 import { useSearchParams } from "next/navigation"
 import { useLockers } from "@/hooks/use-lockers"
 import { useMediaQuery } from "@/hooks/use-media-query"
@@ -35,38 +33,11 @@ function LockersPage() {
 
   const handleAddItem = (dni: string, ticket: string) => {
     if (selectedLocker !== null && lockers) {
-      const newLockers = [...lockers]
-      const locker = newLockers[selectedLocker]
+      // Trigger a full refresh of lockers data
+      mutate()
 
-      if (locker.lockerDetails.length < 3) {
-        const newItem: LockerDetail = {
-          id: Date.now(), // Generar un ID temporal
-          teamName: "",
-          itemDescription: null,
-          inTime: new Date().toISOString(),
-          outTime: null,
-          ticketCode: ticket,
-          user: {
-            id: Date.now(), // Generar un ID temporal
-            firstName: "",
-            lastName: "",
-            phoneNumber: "",
-            documentNumber: dni,
-          },
-        }
-
-        locker.lockerDetails.push(newItem)
-
-        // Actualizar optimistamente la UI
-        mutate(newLockers, false)
-
-        // Guardar en localStorage para persistencia local
-        localStorage.setItem("lockers", JSON.stringify(newLockers))
-        syncTicketsWithLockers(newLockers)
-
-        // Notificar a otros componentes
-        window.dispatchEvent(new CustomEvent("lockersUpdated"))
-      }
+      // Close the dialog
+      setIsDialogOpen(false)
     }
   }
 

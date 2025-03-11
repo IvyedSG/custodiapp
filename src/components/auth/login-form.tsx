@@ -28,7 +28,7 @@ export function LoginForm() {
 
     try {
       const response = await fetch(
-        `https://cdv-custody-api.onrender.com/cdv-custody/login?username=${username}&password=${password}`,
+        `https://cdv-custody-api.onrender.com/cdv-custody/auth/login?username=${username}&password=${password}`,
         {
           method: "POST",
           headers: {
