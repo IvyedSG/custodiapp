@@ -14,7 +14,6 @@ import type { Locker } from "@/types/locker"
 
 function LockersLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const router = useRouter()
   const [serviceName, setServiceName] = useState<string | null>(null)
   const [staff, setStaff] = useState<string | null>(null)
@@ -203,7 +202,7 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
               {!isMobile && !isTablet && (
                 <>
                   <div className="hidden md:flex rounded-lg bg-purple-600 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white">
-                    {serviceName && `${serviceName} servicio`}
+                    {serviceName && `${serviceName}`}
                     {serviceName && staff && " - "}
                     {staff && `Encargado: ${staff}`}
                   </div>

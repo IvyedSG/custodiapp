@@ -17,14 +17,23 @@ import { Badge } from "@/components/ui/badge"
 import { Lock, Unlock, Package, Eye, Check, Ticket, Loader2 } from 'lucide-react'
 import { LockerDialog } from '@/components/lockers/locker-dialog'
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type { Locker, LockerDetail } from "@/types/locker"
+import type { Locker } from "@/types/locker"
 import { getLockerStatus } from "@/lib/utils"
+
+// Define a proper type for emergency items instead of using 'any'
+interface EmergencyItem {
+  ticket: string
+  dni: string
+  location: string
+  description: string
+  timestamp: string | Date
+}
 
 export default function LockersStatusPage() {
   const [lockers, setLockers] = useState<Locker[]>([])
   const [selectedLocker, setSelectedLocker] = useState<Locker | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [emergencyItems, setEmergencyItems] = useState<any[]>([])
+  const [emergencyItems, setEmergencyItems] = useState<EmergencyItem[]>([])
   const [loadingDeliveries, setLoadingDeliveries] = useState<{[key: string]: boolean}>({})
   const [isAnyDeliveryInProgress, setIsAnyDeliveryInProgress] = useState(false)
 
@@ -205,7 +214,7 @@ export default function LockersStatusPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {lockers.map((locker, index) => {
+              {lockers.map((locker) => {
                 const status = getLockerStatus(locker.lockerDetails.length)
                 const isLockerDeliveryInProgress = locker.lockerDetails.some((_, itemIndex) => 
                   loadingDeliveries[`locker-${locker.id}-${itemIndex}`]
@@ -222,7 +231,7 @@ export default function LockersStatusPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-muted-foreground" />
-                        {locker.lockerDetails.map((item, itemIndex) => (
+                        {locker.lockerDetails.map((item) => (
                           <Badge 
                             key={item.ticketCode} 
                             variant="secondary"
@@ -332,7 +341,7 @@ export default function LockersStatusPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMarkAsDelivered(lockers[0].id, index, true)}
+                        onClick={() => handleMarkAsDelivered(0, index, true)}
                         disabled={isLoading || (isAnyDeliveryInProgress && !isLoading)}
                         className={`text-green-600 hover:text-green-700 hover:bg-green-50 ${
                           isAnyDeliveryInProgress && !isLoading ? "opacity-50 cursor-not-allowed" : ""

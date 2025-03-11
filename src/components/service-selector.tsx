@@ -53,7 +53,6 @@ export function ServiceSelector() {
   const [dni, setDni] = useState("")
   const [user, setUser] = useState<User | null>(null)
   const [isUserSelected, setIsUserSelected] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
   const router = useRouter()
 
   // Add a function to check JWT and redirect if needed
@@ -182,7 +181,8 @@ export function ServiceSelector() {
       } else {
         return `${hour - 12}:${minutes} PM`
       }
-    } catch (e) {
+    } catch (_) {
+      // Using underscore to indicate intentionally unused parameter
       return timeString
     }
   }
@@ -234,7 +234,6 @@ export function ServiceSelector() {
       }
 
       const data = await response.json()
-      setSessionId(data.sessionId)
 
       localStorage.setItem("sessionId", data.sessionId)
       localStorage.setItem("selectedService", selectedService)

@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { reserveTicketForPreview, releaseReservedTickets, assignTicket, syncTicketsWithServer, reserveTicketForPreviewAsync, assignTicketAsync } from "@/lib/utils"
+import { reserveTicketForPreview, releaseReservedTickets, assignTicket, syncTicketsWithServer } from "@/lib/utils"
 
 import { useState, useEffect, useCallback } from "react"
 import { format } from "date-fns"
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Package, Lock, Unlock, Ticket, Clock, User, Loader2,  } from "lucide-react"
+import { Package, Lock, Unlock, Ticket, Clock, User, Loader2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useUser } from "@/hooks/use-user"
@@ -75,8 +75,8 @@ export function LockerDialog({ isOpen, setIsOpen, locker, onAddItem, viewOnly = 
       
       // Ordenar los tickets por número para obtener el más bajo
       const availableTickets = data
-        .filter((ticket: any) => ticket.status === "AVAILABLE")
-        .sort((a: any, b: any) => {
+        .filter((ticket: { status: string }) => ticket.status === "AVAILABLE")
+        .sort((a: { code: string }, b: { code: string }) => {
           const numA = parseInt(a.code.split('-')[1])
           const numB = parseInt(b.code.split('-')[1])
           return numA - numB

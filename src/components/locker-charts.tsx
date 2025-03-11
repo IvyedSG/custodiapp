@@ -4,11 +4,26 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Ba
 
 const COLORS = ['#2ECC71', '#F1C40F', '#E74C3C']
 
-interface ChartProps {
-  data: any[]
+// Define proper types for the chart data instead of using 'any'
+interface PieChartData {
+  name: string
+  value: number
 }
 
-export function LockerStatusPieChart({ data }: ChartProps) {
+interface BarChartData {
+  locker: string | number
+  items: number
+}
+
+interface PieChartProps {
+  data: PieChartData[]
+}
+
+interface BarChartProps {
+  data: BarChartData[]
+}
+
+export function LockerStatusPieChart({ data }: PieChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
@@ -33,7 +48,7 @@ export function LockerStatusPieChart({ data }: ChartProps) {
   )
 }
 
-export function LockerOccupancyBarChart({ data }: ChartProps) {
+export function LockerOccupancyBarChart({ data }: BarChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart
