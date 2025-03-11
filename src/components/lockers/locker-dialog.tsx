@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Package, Lock, Unlock, Ticket, Clock, User, Loader2 } from "lucide-react"
+import { Package, Lock, Unlock, Ticket, Clock, User, Loader2, Phone } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useUser } from "@/hooks/use-user"
@@ -31,11 +31,57 @@ export function LockerDialog({ isOpen, setIsOpen, locker, onAddItem, viewOnly = 
   const [dni, setDni] = useState("")
   const [nextTicket, setNextTicket] = useState<string | null>(null)
   const [isLoadingTickets, setIsLoadingTickets] = useState(false)
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [detailedLocker, setDetailedLocker] = useState<Locker | null>(null)
   const { user, isLoading: isUserLoading, error: userError, searchUserByDNI, resetUser } = useUser()
   const { isLoading: isCheckInLoading, error: checkInError, performCheckIn } = useCheckIn()
   const isMobile = useMediaQuery("(max-width: 639px)")
   const [searchedDni, setSearchedDni] = useState("");
   const [reservedTicket, setReservedTicket] = useState<string | null>(null)
+
+  // Fetch detailed locker data when dialog opens in view mode
+  useEffect(() => {
+    const fetchLockerDetails = async () => {
+      if (!isOpen || !locker || !viewOnly) return;
+      
+      setIsLoadingDetails(true);
+      try {
+        const sessionId = localStorage.getItem("sessionId");
+        const jwt = localStorage.getItem("jwt");
+        
+        if (!sessionId || !jwt) {
+          console.error("No sessionId or jwt found");
+          return;
+        }
+        
+        const response = await fetch(
+          `https://cdv-custody-api.onrender.com/cdv-custody/api/v1/lockers/${locker.id}/transactions`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Session-id": sessionId,
+              Authorization: `Bearer ${jwt}`,
+            },
+            cache: "no-store",
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching locker details: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setDetailedLocker(data);
+      } catch (error) {
+        console.error("Error fetching locker details:", error);
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    };
+    
+    fetchLockerDetails();
+  }, [isOpen, locker, viewOnly]);
 
   const fetchNextAvailableTicket = useCallback(async () => {
     setIsLoadingTickets(true)
@@ -122,6 +168,7 @@ export function LockerDialog({ isOpen, setIsOpen, locker, onAddItem, viewOnly = 
       setDni("")
       setNextTicket(null)
       resetUser()
+      setDetailedLocker(null)
       
       // Liberar los tickets reservados si se cierra sin confirmar
       if (reservedTicket) {
@@ -159,13 +206,30 @@ export function LockerDialog({ isOpen, setIsOpen, locker, onAddItem, viewOnly = 
 
   if (!locker) return null
 
-  const status = getLockerStatus(locker.lockerDetails.length)
-  const isAddingDisabled = locker.lockerDetails.length >= 3 || !user || !nextTicket || isCheckInLoading
+  // Use detailed locker data if available (in view mode), otherwise use the passed locker
+  const displayLocker = detailedLocker || locker;
+  const status = getLockerStatus(displayLocker.lockerDetails.length)
+  
+  // Usar currentItems del locker si está disponible, si no, usar el length de lockerDetails
+  const currentItems = typeof displayLocker.currentItems === 'number' 
+    ? displayLocker.currentItems 
+    : displayLocker.lockerDetails.length;
+  
+  // Determinar si el locker está lleno basado en la capacidad real
+  const isLockerFull = currentItems >= (displayLocker.capacity || 3);
+  const isAddingDisabled = isLockerFull || !user || !nextTicket || isCheckInLoading;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent
-        className={cn("p-0 gap-0 bg-white", isMobile ? "max-w-[95vw]" : "sm:max-w-[95vw] md:max-w-[800px]")}
+        className={cn(
+          "p-0 gap-0 bg-white", 
+          isMobile 
+            ? "max-w-[95vw]" 
+            : viewOnly 
+              ? "sm:max-w-[95vw] md:max-w-[900px] lg:max-w-[1000px]" 
+              : "sm:max-w-[95vw] md:max-w-[800px]"
+        )}
       >
         <DialogHeader className="p-4 border-b">
           <div className="flex items-center justify-between">
@@ -175,15 +239,22 @@ export function LockerDialog({ isOpen, setIsOpen, locker, onAddItem, viewOnly = 
               ) : (
                 <Lock className="h-5 w-5 text-purple-600" />
               )}
-              Locker {locker.id}
+              Locker {displayLocker.id}
             </DialogTitle>
           </div>
-          <DialogDescription className="sr-only">Gestionar items del locker {locker.id}</DialogDescription>
+          <DialogDescription className="sr-only">Gestionar items del locker {displayLocker.id}</DialogDescription>
         </DialogHeader>
 
-        <div className={cn("grid gap-6 p-6", isMobile ? "grid-cols-1" : "sm:grid-cols-2")}>
+        {/* Modificamos esta línea para usar grid-cols-1 cuando estamos en viewOnly */}
+        <div className={cn("grid gap-6 p-6", 
+          viewOnly 
+            ? "grid-cols-1" 
+            : isMobile 
+              ? "grid-cols-1" 
+              : "sm:grid-cols-2"
+        )}>
           {/* Sección de agregar item */}
-          {!viewOnly && locker.lockerDetails.length < 3 && (
+          {!viewOnly && !isLockerFull && (
             <div className="space-y-4">
               <h3 className="text-base font-medium text-purple-900">Agregar nuevo item</h3>
 
@@ -288,49 +359,90 @@ export function LockerDialog({ isOpen, setIsOpen, locker, onAddItem, viewOnly = 
             </div>
           )}
 
-          {/* Sección de items actuales */}
-          <div className={viewOnly || isMobile ? "" : "relative"}>
-            {!viewOnly && !isMobile && <Separator orientation="vertical" className="absolute -left-3 h-full" />}
+          {/* 
+            Sección de items actuales - mantenemos el ancho completo en viewOnly
+            y también cuando el locker está lleno en el modo normal
+          */}
+          <div className={cn(
+            viewOnly || isLockerFull ? "w-full col-span-full" : isMobile ? "" : "relative"
+          )}>
+            {!viewOnly && !isMobile && !isLockerFull && <Separator orientation="vertical" className="absolute -left-3 h-full" />}
 
             <div className="space-y-4">
               <h3 className="text-base font-medium text-purple-900">Items actuales</h3>
 
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                {locker.lockerDetails.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-4 text-center">
-                    <p className="text-sm text-gray-500">Este casillero está vacío</p>
-                  </div>
-                ) : (
-                  locker.lockerDetails.map((item) => (
-                    <motion.div
-                      key={item.ticketCode}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white rounded-lg border p-3 space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Ticket className="h-4 w-4 text-purple-500" />
-                          <span className="font-mono text-sm font-medium text-purple-700">{item.ticketCode}</span>
+              {isLoadingDetails && viewOnly ? (
+                <div className="flex justify-center p-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                </div>
+              ) : (
+                <div className={cn(
+                  viewOnly || isLockerFull
+                    ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" 
+                    : "space-y-3 max-h-[400px] overflow-y-auto pr-2"
+                )}>
+                  {displayLocker.lockerDetails.length === 0 ? (
+                    <div className={cn(
+                      "rounded-lg border border-dashed p-4 text-center",
+                      (viewOnly || isLockerFull) && "col-span-full"
+                    )}>
+                      <p className="text-sm text-gray-500">Este casillero está vacío</p>
+                    </div>
+                  ) : (
+                    displayLocker.lockerDetails.map((item) => (
+                      <motion.div
+                        key={item.ticketCode}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-lg border p-3 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Ticket className="h-4 w-4 text-purple-500" />
+                            <span className="font-mono text-sm font-medium text-purple-700">{item.ticketCode}</span>
+                          </div>
+                          <div className="text-xs px-2 py-1 rounded-full bg-purple-50 text-purple-700">
+                            {item.teamName}
+                          </div>
                         </div>
-                        <span className="text-xs text-gray-500">DNI: {item.user.documentNumber}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Clock className="h-3 w-3" />
-                        <span>
-                          {format(new Date(item.inTime), "d 'de' MMMM 'a las' HH:mm", {
-                            locale: es,
-                          })}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
+                        
+                        <div className="rounded-md bg-gray-50 p-2.5 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <User className="h-3.5 w-3.5 text-gray-500" />
+                            <span className="text-xs text-gray-700 font-medium">
+                              {item.user.firstName} {item.user.lastName}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-gray-500">DNI:</span>
+                              <span className="font-mono font-medium">{item.user.documentNumber}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-3 w-3 text-gray-500" />
+                              <span className="font-mono">{item.user.phoneNumber}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            {format(new Date(item.inTime), "d 'de' MMMM 'a las' HH:mm", {
+                              locale: es,
+                            })}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center gap-2 text-sm text-purple-700">
                 <Package className="h-4 w-4" />
-                <span>Items: {locker.lockerDetails.length}/3</span>
+                <span>Items: {displayLocker.lockerDetails.length}/{displayLocker.capacity || 3}</span>
               </div>
             </div>
           </div>
