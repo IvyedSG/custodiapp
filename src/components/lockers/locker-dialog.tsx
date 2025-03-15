@@ -279,6 +279,10 @@ export function LockerDialog({ isOpen, setIsOpen, locker, onAddItem, viewOnly = 
                       maxLength={8}
                       disabled={isCheckInLoading}
                       autoFocus
+                      autoComplete="off"    // Añadir esta línea para deshabilitar el autocompletado
+                      autoCorrect="off"     // Prevenir corrección automática
+                      spellCheck="false"    // Deshabilitar verificación ortográfica
+                      aria-autocomplete="none"  // Asegurar que los lectores de pantalla no sugieran autocompletado
                     />
                     {isUserLoading && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
