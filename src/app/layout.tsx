@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import localFont from "next/font/local"
-import { BackgroundGradient } from "@/components/ui/background-gradient"
 import "./globals.css"
 
 const geistSans = localFont({
@@ -39,11 +38,9 @@ export default function RootLayout({
     <html lang="es" className="overflow-x-hidden">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans overflow-x-hidden`}>
         <div className="relative min-h-[100dvh]">
-          <BackgroundGradient />
           <main className="relative">{children}</main>
         </div>
       </body>
     </html>
   )
 }
-

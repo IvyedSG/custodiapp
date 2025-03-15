@@ -253,7 +253,7 @@ export function ServiceSelector() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center p-4">
+    <div className="relative z-10 flex min-h-[100dvh] w-full items-center justify-center p-4">
       <div className="flex h-[calc(100vh-8rem)] w-full max-w-2xl flex-col space-y-4">
         <div className="space-y-2">
           <Progress value={step === 1 ? 50 : 100} className="h-2" />

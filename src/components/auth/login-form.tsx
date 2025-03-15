@@ -62,7 +62,7 @@ export function LoginForm() {
       transition={{ duration: 0.5 }}
       className="w-full"
     >
-      <Card className="overflow-hidden border-none bg-white/90 shadow-lg backdrop-blur-sm">
+      <Card className="overflow-hidden border-none bg-white/90 shadow-lg backdrop-blur-sm dark:bg-black/50">
         <form onSubmit={handleSubmit}>
           <CardHeader className="space-y-1 px-4 sm:px-6">
             <motion.div
