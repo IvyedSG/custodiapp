@@ -37,7 +37,7 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
 
       try {
         const response = await fetch(
-          "https://cdv-custody-api.onrender.com/cdv-custody/api/v1/lockers/active/with-details?campus=SURCO",
+          "https://cdv-custody-api.onrender.com/cdv-custody/api/v1/lockers/active/with-details?campus=SURCO&type=LOCKER",
           {
             method: "GET",
             headers: {
@@ -280,7 +280,7 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 overflow-auto p-2 sm:p-3 md:p-4 lg:p-6">
+      <main className="flex-1 overflow-auto p-2 pt-1 sm:p-3 sm:pt-1.5 md:p-4 md:pt-2 lg:p-6 lg:pt-3">
         <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm">
           <div className="hidden md:grid w-full grid-cols-3 border-b">
             {navLinks.map((link) => {

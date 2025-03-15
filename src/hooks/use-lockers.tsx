@@ -48,7 +48,7 @@ const fetchLockers = async (): Promise<Locker[]> => {
   }
 
   const response = await fetch(
-    "https://cdv-custody-api.onrender.com/cdv-custody/api/v1/lockers/active/with-details?campus=SURCO",
+    "https://cdv-custody-api.onrender.com/cdv-custody/api/v1/lockers/active/with-details?campus=SURCO&type=LOCKER",
     {
       method: "GET",
       headers: {
