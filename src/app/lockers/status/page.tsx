@@ -250,7 +250,7 @@ export default function LockersStatusPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap justify-center gap-2 min-w-[240px]">
                         {locker.lockerDetails.map((item, itemIndex) => {
                           const deliveryKey = `locker-${locker.id}-${itemIndex}`;
                           const isLoading = loadingDeliveries[deliveryKey];
@@ -262,20 +262,17 @@ export default function LockersStatusPage() {
                               size="sm"
                               onClick={() => handleMarkAsDelivered(locker.id, itemIndex, false)}
                               disabled={isLoading || (isAnyDeliveryInProgress && !isLoading)}
-                              className={`text-green-600 hover:text-green-700 hover:bg-green-50 gap-2 ${
+                              className={`bg-green-100 border-green-300 text-green-800 hover:bg-green-200 hover:text-green-900 w-[70px] h-[36px] ${
                                 isAnyDeliveryInProgress && !isLoading ? "opacity-50 cursor-not-allowed" : ""
                               }`}
                             >
                               {isLoading ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  Entregando...
-                                </>
+                                <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <>
+                                <div className="flex items-center gap-1">
                                   <Check className="h-4 w-4" />
-                                  Entregar {item.ticketCode}
-                                </>
+                                  <span className="text-xs font-bold">{item.ticketCode}</span>
+                                </div>
                               )}
                             </Button>
                           );
