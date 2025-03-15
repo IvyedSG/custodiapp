@@ -26,6 +26,13 @@ function LockersLayoutContent({ children }: { children: React.ReactNode }) {
   const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1023px)")
 
   useEffect(() => {
+    const sessionId = localStorage.getItem("sessionId")
+    
+    if (!sessionId) {
+      router.push("/")
+      return
+    }
+    
     const loadLockers = async () => {
       const sessionId = localStorage.getItem("sessionId")
       const jwt = localStorage.getItem("jwt")
